@@ -10,32 +10,38 @@ const PHOTO_ITEMS = [
   {
     id: 1,
     src: "https://images.unsplash.com/photo-1708704854844-9a5193be3394?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmYXNoaW9uJTIwcGhvdG9ncmFwaHQlMjBlZGl0b3JpYWwvfGVufDF8fHx8MTc2OTc1ODU4Mnww&ixlib=rb-4.1.0&q=80&w=1080",
-    caption: "VOGUE ITALIA / 1999"
+    caption: "VOGUE ITALIA / 1999",
+    category: "editorial"
   },
   {
     id: 2,
     src: "https://images.unsplash.com/photo-1743335962347-15f35ef125a9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwb3J0cmFpdCUyMHBob3RvZ3JhcGh5JTIwYXJ0aXN0aWMlMjBncmFpbnl8ZW58MXx8fHwxNzY5NzU4NTgzfDA&ixlib=rb-4.1.0&q=80&w=1080",
-    caption: "UNTITLED PORTRAIT SERIES"
+    caption: "UNTITLED PORTRAIT SERIES",
+    category: "personal"
   },
   {
     id: 3,
     src: "https://images.unsplash.com/photo-1598474821521-ca48a956f925?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMHBvbGFyb2lkJTIwdGV4dHVyZXxlbnwxfHx8fDE3Njk3NTg1ODN8MA&ixlib=rb-4.1.0&q=80&w=1080",
-    caption: "ACID WASH DREAMS"
+    caption: "ACID WASH DREAMS",
+    category: "personal"
   },
   {
     id: 4,
     src: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwyfHxmnYXNoaW9uJTIwcGhvdG9ncmFwaHklMjBqrGJ5JTIwcGhvdG9ncmFwaHklMjBnaXJsJTIwbG9vayUyMGF3YXl8ZW58MXx8fHwxNzY5NzU4NTgyfDA&ixlib=rb-4.1.0&q=80&w=1080",
-    caption: "SUMMER HAZE"
+    caption: "SUMMER HAZE",
+    category: "commercial"
   },
   {
     id: 5,
     src: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwzfHxmjYXNoaW9uJTIwcGhvdG9ncmFwaHl8ZW58MXx8fHwxNzY5NzU4NTgyfDA&ixlib=rb-4.1.0&q=80&w=1080",
-    caption: "NEON DEMONS"
+    caption: "NEON DEMONS",
+    category: "editorial"
   },
   {
     id: 6,
     src: "https://images.unsplash.com/photo-1483985988355-763728e1935b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHw1fHxmnYXNoaW9uJTIwcGhvdG9ncmFwaHl8ZW58MXx8fHwxNzY5NzU4NTgyfDA&ixlib=rb-4.1.0&q=80&w=1080",
-    caption: "BACKSTAGE PASS"
+    caption: "BACKSTAGE PASS",
+    category: "commercial"
   }
 ];
 
@@ -82,9 +88,14 @@ function useIsMobile() {
   return isMobile;
 }
 
-export default function App() {
-  const [activeTab, setActiveTab] = useState<'photo' | 'film'>('photo');
+type TabType = 'editorial' | 'personal' | 'commercial' | 'film';
+
+export default function AppOption3SeparateTabs() {
+  const [activeTab, setActiveTab] = useState<TabType>('editorial');
   const isMobile = useIsMobile();
+
+  const filteredPhotos = PHOTO_ITEMS.filter(item => item.category === activeTab);
+  const isPhotoTab = activeTab !== 'film';
 
   return (
     <div className="h-screen w-full bg-white relative overflow-hidden font-sans">
@@ -96,7 +107,7 @@ export default function App() {
       <motion.header 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="fixed top-0 left-0 right-0 px-4 pt-4 pb-3 md:px-8 md:pt-6 md:pb-4 lg:pt-8 lg:pb-6 z-40 bg-white"
+        className="fixed top-0 left-0 right-0 px-4 pt-4 pb-3 md:px-8 md:pt-6 md:pb-4 lg:pt-8 lg:pb-6 z-40 bg-white border-b-2 border-gray-200"
       >
         <div className="max-w-7xl mx-auto">
           <h1 
@@ -109,30 +120,50 @@ export default function App() {
         </div>
       </motion.header>
 
-      {/* Tab Navigation */}
+      {/* All Main Tabs - Editorial, Personal, Commercial, Film, About */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="fixed top-[100px] md:top-[120px] lg:top-[160px] left-0 right-0 z-30 px-4 md:px-8"
+        className="fixed top-[100px] md:top-[120px] lg:top-[160px] left-0 right-0 z-30 px-4 md:px-8 bg-white py-2 border-b-2 border-gray-200"
       >
-        <div className="max-w-7xl mx-auto flex gap-3 md:gap-4">
+        <div className="max-w-7xl mx-auto flex flex-wrap gap-2 md:gap-3">
           <button
-            onClick={() => setActiveTab('photo')}
-            className={`relative px-4 md:px-6 lg:px-8 py-2 md:py-3 border-3 border-black font-black uppercase text-sm md:text-base lg:text-xl tracking-tight transition-all duration-300 ${
-              activeTab === 'photo'
+            onClick={() => setActiveTab('editorial')}
+            className={`px-3 md:px-5 lg:px-6 py-2 md:py-2.5 border-3 border-black font-black uppercase text-xs md:text-sm lg:text-base tracking-tight transition-all duration-300 ${
+              activeTab === 'editorial'
                 ? 'bg-[#00ff00] text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] translate-y-0'
-                : 'bg-white text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
+                : 'bg-white text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[-2px] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'
             }`}
           >
-            Photography & Visual Art
+            Editorial
+          </button>
+          <button
+            onClick={() => setActiveTab('personal')}
+            className={`px-3 md:px-5 lg:px-6 py-2 md:py-2.5 border-3 border-black font-black uppercase text-xs md:text-sm lg:text-base tracking-tight transition-all duration-300 ${
+              activeTab === 'personal'
+                ? 'bg-[#00ff00] text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] translate-y-0'
+                : 'bg-white text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[-2px] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'
+            }`}
+          >
+            Personal
+          </button>
+          <button
+            onClick={() => setActiveTab('commercial')}
+            className={`px-3 md:px-5 lg:px-6 py-2 md:py-2.5 border-3 border-black font-black uppercase text-xs md:text-sm lg:text-base tracking-tight transition-all duration-300 ${
+              activeTab === 'commercial'
+                ? 'bg-[#00ff00] text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] translate-y-0'
+                : 'bg-white text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[-2px] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'
+            }`}
+          >
+            Commercial
           </button>
           <button
             onClick={() => setActiveTab('film')}
-            className={`relative px-4 md:px-6 lg:px-8 py-2 md:py-3 border-3 border-black font-black uppercase text-sm md:text-base lg:text-xl tracking-tight transition-all duration-300 ${
+            className={`px-3 md:px-5 lg:px-6 py-2 md:py-2.5 border-3 border-black font-black uppercase text-xs md:text-sm lg:text-base tracking-tight transition-all duration-300 ${
               activeTab === 'film'
                 ? 'bg-[#00ff00] text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] translate-y-0'
-                : 'bg-white text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
+                : 'bg-white text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[-2px] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'
             }`}
           >
             Film & Direction
@@ -144,24 +175,24 @@ export default function App() {
       <div className="pt-[180px] md:pt-[200px] lg:pt-[240px] pb-16 px-4 md:px-8 h-full overflow-y-auto">
         <div className="max-w-7xl mx-auto">
           
-          {/* Photography Tab Content */}
+          {/* Photography Content (Editorial, Personal, Commercial) */}
           <AnimatePresence mode="wait">
-            {activeTab === 'photo' && (
+            {isPhotoTab && (
               <motion.div
-                key="photo"
+                key={activeTab}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
                 transition={{ duration: 0.3 }}
               >
                 <div className="mb-8 md:mb-12 border-b-4 border-black pb-4 flex items-baseline justify-between">
-                  <h2 className="text-3xl md:text-5xl lg:text-6xl font-black uppercase tracking-tighter">Photography</h2>
-                  <span className="font-mono text-[10px] md:text-xs uppercase tracking-widest">Selected Works 1999—2026</span>
+                  <h2 className="text-3xl md:text-5xl lg:text-6xl font-black uppercase tracking-tighter">{activeTab}</h2>
+                  <span className="font-mono text-[10px] md:text-xs uppercase tracking-widest">Photography Works</span>
                 </div>
                 
                 <ResponsiveMasonry columnsCountBreakPoints={{350: 1, 750: 2, 900: 3}}>
                   <Masonry gutter="2rem">
-                    {PHOTO_ITEMS.map((item) => (
+                    {filteredPhotos.map((item) => (
                       <div key={item.id} className="group cursor-pointer">
                         <div className="relative overflow-hidden border-2 border-black bg-gray-100">
                           <ImageWithFallback 
@@ -169,6 +200,7 @@ export default function App() {
                             alt={item.caption}
                             className="w-full h-auto grayscale group-hover:grayscale-0 transition-all duration-500 ease-in-out transform group-hover:scale-105"
                           />
+                          <div className="absolute inset-0 bg-blue-500/20 opacity-0 group-hover:opacity-100 transition-opacity mix-blend-multiply pointer-events-none"></div>
                         </div>
                         <div className="mt-2 flex justify-between items-center border-b border-gray-300 pb-1">
                           <p className="font-mono text-[10px] uppercase tracking-wider">{item.caption}</p>
