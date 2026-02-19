@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play } from 'lucide-react';
 import Masonry, { ResponsiveMasonry } from 'react-responsive-masonry';
@@ -93,6 +94,7 @@ function useIsMobile() {
 }
 
 export default function AppOption1SubTabs() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'photo' | 'film'>('photo');
   const [photoCategory, setPhotoCategory] = useState<'editorial' | 'personal' | 'commercial'>('editorial');
   const [filmCategory, setFilmCategory] = useState<'shorts' | 'docs' | 'film'>('shorts');
@@ -136,18 +138,20 @@ export default function AppOption1SubTabs() {
   }, [lightboxOpen, filteredPhotos.length]);
 
   return (
-    <div className="h-screen w-full bg-white relative overflow-hidden font-sans">
+    <div className="h-screen w-full bg-white flex flex-col font-sans">
       
       {/* Background Noise/Texture Overlay */}
-      <div className="fixed inset-0 pointer-events-none opacity-[0.03] z-50 bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
+      <div className="fixed inset-0 pointer-events-none opacity-[0.03] z-[5] bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
 
       {/* Main Header */}
       <motion.header 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="fixed top-0 left-0 right-0 px-4 pt-4 pb-3 md:px-8 md:pt-6 md:pb-4 lg:pt-8 lg:pb-6 z-40 bg-white"
+        className="fixed top-0 left-0 right-0 px-4 pt-4 pb-3 md:px-8 md:pt-6 md:pb-4 lg:pt-8 lg:pb-6 z-50"
+        style={{ backgroundColor: 'white' }}
       >
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
+        <div className="absolute inset-0 bg-white -z-10"></div>
+        <div className="max-w-7xl mx-auto flex items-center justify-between relative z-10">
           <div className="flex-1">
             <h1 
               className="text-3xl md:text-5xl lg:text-7xl font-black uppercase tracking-tighter text-transparent" 
@@ -213,13 +217,15 @@ export default function AppOption1SubTabs() {
 
                 {/* Menu Items */}
                 <nav className="flex-1 flex flex-col gap-6">
-                  <motion.a
+                  <motion.button
                     initial={{ x: 50, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
                     transition={{ delay: 0.1 }}
-                    href="#about"
-                    onClick={() => setIsMenuOpen(false)}
-                    className="group relative"
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      navigate('/about');
+                    }}
+                    className="group relative text-left w-full"
                   >
                     <span className="text-4xl md:text-5xl font-black uppercase tracking-tighter text-transparent group-hover:text-[#00ff00] transition-all duration-300"
                       style={{ WebkitTextStroke: "2px #00ff00" }}
@@ -232,7 +238,7 @@ export default function AppOption1SubTabs() {
                       whileHover={{ width: '100%' }}
                       transition={{ duration: 0.3 }}
                     />
-                  </motion.a>
+                  </motion.button>
 
                   <motion.a
                     initial={{ x: 50, opacity: 0 }}
@@ -390,9 +396,11 @@ export default function AppOption1SubTabs() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="fixed top-[100px] md:top-[120px] lg:top-[160px] left-0 right-0 z-30 px-4 md:px-8"
+        className="fixed top-[100px] md:top-[120px] lg:top-[160px] left-0 right-0 z-40 px-4 md:px-8 pb-4"
+        style={{ backgroundColor: 'white' }}
       >
-        <div className="max-w-7xl mx-auto flex gap-3 md:gap-4">
+        <div className="absolute inset-0 bg-white -z-10"></div>
+        <div className="max-w-7xl mx-auto flex gap-3 md:gap-4 relative z-10">
           <button
             onClick={() => setActiveTab('photo')}
             className={`relative px-4 md:px-6 lg:px-8 py-2 md:py-3 border-3 border-black font-black uppercase text-sm md:text-base lg:text-xl tracking-tight transition-all duration-300 ${
@@ -416,9 +424,108 @@ export default function AppOption1SubTabs() {
         </div>
       </motion.div>
 
+      {/* Sub-tabs - Sticky */}
+      <div className="fixed top-[180px] md:top-[200px] lg:top-[240px] left-0 right-0 z-30 px-4 md:px-8 py-4" style={{ backgroundColor: 'white' }}>
+        <div className="absolute inset-0 bg-white -z-10"></div>
+        <div className="max-w-7xl mx-auto relative z-10">
+          <AnimatePresence mode="wait">
+            {activeTab === 'photo' && (
+              <motion.div
+                key="photo-subtabs"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.3 }}
+                className="flex flex-col md:flex-row md:justify-between md:items-center gap-4"
+              >
+                <div className="flex gap-4 md:gap-6">
+                  <button
+                    onClick={() => setPhotoCategory('editorial')}
+                    className={`font-mono text-xs md:text-sm uppercase tracking-widest transition-colors ${
+                      photoCategory === 'editorial'
+                        ? 'text-black font-bold underline decoration-2 underline-offset-4'
+                        : 'text-gray-400 hover:text-gray-600'
+                    }`}
+                  >
+                    Editorial
+                  </button>
+                  <button
+                    onClick={() => setPhotoCategory('personal')}
+                    className={`font-mono text-xs md:text-sm uppercase tracking-widest transition-colors ${
+                      photoCategory === 'personal'
+                        ? 'text-black font-bold underline decoration-2 underline-offset-4'
+                        : 'text-gray-400 hover:text-gray-600'
+                    }`}
+                  >
+                    Personal
+                  </button>
+                  <button
+                    onClick={() => setPhotoCategory('commercial')}
+                    className={`font-mono text-xs md:text-sm uppercase tracking-widest transition-colors ${
+                      photoCategory === 'commercial'
+                        ? 'text-black font-bold underline decoration-2 underline-offset-4'
+                        : 'text-gray-400 hover:text-gray-600'
+                    }`}
+                  >
+                    Commercial
+                  </button>
+                </div>
+                <span className="font-mono text-[10px] md:text-xs uppercase tracking-widest text-gray-500">Selected Works 1999—2026</span>
+              </motion.div>
+            )}
+            
+            {activeTab === 'film' && (
+              <motion.div
+                key="film-subtabs"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+                className="flex flex-col md:flex-row md:justify-between md:items-center gap-4"
+              >
+                <div className="flex gap-4 md:gap-6">
+                  <button
+                    onClick={() => setFilmCategory('shorts')}
+                    className={`font-mono text-xs md:text-sm uppercase tracking-widest transition-colors ${
+                      filmCategory === 'shorts'
+                        ? 'text-black font-bold underline decoration-2 underline-offset-4'
+                        : 'text-gray-400 hover:text-gray-600'
+                    }`}
+                  >
+                    Shorts
+                  </button>
+                  <button
+                    onClick={() => setFilmCategory('docs')}
+                    className={`font-mono text-xs md:text-sm uppercase tracking-widest transition-colors ${
+                      filmCategory === 'docs'
+                        ? 'text-black font-bold underline decoration-2 underline-offset-4'
+                        : 'text-gray-400 hover:text-gray-600'
+                    }`}
+                  >
+                    Docs
+                  </button>
+                  <button
+                    onClick={() => setFilmCategory('film')}
+                    className={`font-mono text-xs md:text-sm uppercase tracking-widest transition-colors ${
+                      filmCategory === 'film'
+                        ? 'text-black font-bold underline decoration-2 underline-offset-4'
+                        : 'text-gray-400 hover:text-gray-600'
+                    }`}
+                  >
+                    Film
+                  </button>
+                </div>
+                <span className="font-mono text-[10px] md:text-xs uppercase tracking-widest text-gray-600">Reel 2026</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+
       {/* Content Area */}
-      <div className={`${activeTab === 'photo' ? 'pt-[180px] md:pt-[200px] lg:pt-[240px]' : 'pt-[180px] md:pt-[200px] lg:pt-[240px]'} pb-16 px-4 md:px-8 h-full overflow-y-auto transition-all duration-300`}>
-        <div className="max-w-7xl mx-auto">
+      <div className="fixed top-[240px] md:top-[280px] lg:top-[320px] bottom-[40px] left-0 right-0 overflow-y-auto bg-white">
+        <div className="px-4 md:px-8 py-8">
+          <div className="max-w-7xl mx-auto">
           
           {/* Photography Tab Content */}
           <AnimatePresence mode="wait">
@@ -430,41 +537,6 @@ export default function AppOption1SubTabs() {
                 exit={{ opacity: 0, x: 20 }}
                 transition={{ duration: 0.3 }}
               >
-                <div className="mb-8 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-                  <div className="flex gap-4 md:gap-6">
-                    <button
-                      onClick={() => setPhotoCategory('editorial')}
-                      className={`font-mono text-xs md:text-sm uppercase tracking-widest transition-colors ${
-                        photoCategory === 'editorial'
-                          ? 'text-black font-bold underline decoration-2 underline-offset-4'
-                          : 'text-gray-400 hover:text-gray-600'
-                      }`}
-                    >
-                      Editorial
-                    </button>
-                    <button
-                      onClick={() => setPhotoCategory('personal')}
-                      className={`font-mono text-xs md:text-sm uppercase tracking-widest transition-colors ${
-                        photoCategory === 'personal'
-                          ? 'text-black font-bold underline decoration-2 underline-offset-4'
-                          : 'text-gray-400 hover:text-gray-600'
-                      }`}
-                    >
-                      Personal
-                    </button>
-                    <button
-                      onClick={() => setPhotoCategory('commercial')}
-                      className={`font-mono text-xs md:text-sm uppercase tracking-widest transition-colors ${
-                        photoCategory === 'commercial'
-                          ? 'text-black font-bold underline decoration-2 underline-offset-4'
-                          : 'text-gray-400 hover:text-gray-600'
-                      }`}
-                    >
-                      Commercial
-                    </button>
-                  </div>
-                  <span className="font-mono text-[10px] md:text-xs uppercase tracking-widest text-gray-500">Selected Works 1999—2026</span>
-                </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                   {filteredPhotos.map((item, index) => (
@@ -503,42 +575,6 @@ export default function AppOption1SubTabs() {
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.3 }}
               >
-                <div className="mb-8 md:mb-12 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-                  <div className="flex gap-4 md:gap-6">
-                    <button
-                      onClick={() => setFilmCategory('shorts')}
-                      className={`font-mono text-xs md:text-sm uppercase tracking-widest transition-colors ${
-                        filmCategory === 'shorts'
-                          ? 'text-black font-bold underline decoration-2 underline-offset-4'
-                          : 'text-gray-400 hover:text-gray-600'
-                      }`}
-                    >
-                      Shorts
-                    </button>
-                    <button
-                      onClick={() => setFilmCategory('docs')}
-                      className={`font-mono text-xs md:text-sm uppercase tracking-widest transition-colors ${
-                        filmCategory === 'docs'
-                          ? 'text-black font-bold underline decoration-2 underline-offset-4'
-                          : 'text-gray-400 hover:text-gray-600'
-                      }`}
-                    >
-                      Docs
-                    </button>
-                    <button
-                      onClick={() => setFilmCategory('film')}
-                      className={`font-mono text-xs md:text-sm uppercase tracking-widest transition-colors ${
-                        filmCategory === 'film'
-                          ? 'text-black font-bold underline decoration-2 underline-offset-4'
-                          : 'text-gray-400 hover:text-gray-600'
-                      }`}
-                    >
-                      Film
-                    </button>
-                  </div>
-                  <span className="font-mono text-[10px] md:text-xs uppercase tracking-widest text-gray-600">Reel 2026</span>
-                </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                   {filteredFilms.map((item) => (
                     <div key={item.id} className="group cursor-pointer">
@@ -576,12 +612,13 @@ export default function AppOption1SubTabs() {
             )}
           </AnimatePresence>
 
+          </div>
         </div>
       </div>
       
       {/* Footer */}
       <footer 
-        className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-300 py-2 px-4 z-40"
+        className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-300 py-2 px-4 z-50 shadow-[0_-2px_10px_rgba(0,0,0,0.1)]"
       >
         <div className="flex justify-between items-center text-[8px] font-mono uppercase tracking-wider text-black">
           <span>©1996 VIC LENTAIGNE</span>
