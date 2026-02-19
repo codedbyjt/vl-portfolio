@@ -147,7 +147,7 @@ export default function AppOption1SubTabs() {
       <motion.header 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="fixed top-0 left-0 right-0 px-4 pt-4 pb-3 md:px-8 md:pt-6 md:pb-4 lg:pt-8 lg:pb-6 z-50"
+        className="fixed top-0 left-0 right-0 px-4 pt-3 pb-2 md:px-8 md:pt-6 md:pb-4 lg:pt-8 lg:pb-6 z-50"
         style={{ backgroundColor: 'white' }}
       >
         <div className="absolute inset-0 bg-white -z-10"></div>
@@ -159,7 +159,7 @@ export default function AppOption1SubTabs() {
             >
               VIC LENTAIGNE
             </h1>
-            <div className="w-full h-1 bg-[#00ff00] mt-2"></div>
+            <div className="w-full h-1 bg-[#00ff00] mt-1"></div>
           </div>
           
           {/* Fancy Menu Button */}
@@ -396,7 +396,7 @@ export default function AppOption1SubTabs() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="fixed top-[100px] md:top-[120px] lg:top-[160px] left-0 right-0 z-40 px-4 md:px-8 pb-2"
+        className="fixed top-[85px] md:top-[120px] lg:top-[160px] left-0 right-0 z-40 px-4 md:px-8 pb-1"
         style={{ backgroundColor: 'white' }}
       >
         <div className="absolute inset-0 bg-white -z-10"></div>
@@ -425,7 +425,7 @@ export default function AppOption1SubTabs() {
       </motion.div>
 
       {/* Sub-tabs - Sticky */}
-      <div className="fixed top-[160px] md:top-[180px] lg:top-[220px] left-0 right-0 z-30 px-4 md:px-8 py-3" style={{ backgroundColor: 'white' }}>
+      <div className="fixed top-[140px] md:top-[180px] lg:top-[220px] left-0 right-0 z-30 px-4 md:px-8 py-2" style={{ backgroundColor: 'white' }}>
         <div className="absolute inset-0 bg-white -z-10"></div>
         <div className="max-w-7xl mx-auto relative z-10">
           <AnimatePresence mode="wait">
@@ -523,7 +523,7 @@ export default function AppOption1SubTabs() {
       </div>
 
       {/* Content Area */}
-      <div className="fixed top-[220px] md:top-[240px] lg:top-[280px] bottom-[40px] left-0 right-0 overflow-y-auto bg-white">
+      <div className="fixed top-[185px] md:top-[240px] lg:top-[280px] bottom-[40px] left-0 right-0 overflow-y-auto bg-white">
         <div className="px-4 md:px-8 py-8">
           <div className="max-w-7xl mx-auto">
           
