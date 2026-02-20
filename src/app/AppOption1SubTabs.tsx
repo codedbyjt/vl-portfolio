@@ -361,7 +361,7 @@ export default function AppOption1SubTabs() {
             </button>
 
             {/* Image Container */}
-            <div className="relative w-full h-full flex items-center justify-center p-2 md:p-4">
+            <div className="relative w-full h-full flex items-center justify-center p-4 md:p-2">
               <motion.div
                 key={currentImageIndex}
                 initial={{ opacity: 0, scale: 0.9 }}
@@ -373,7 +373,13 @@ export default function AppOption1SubTabs() {
                 <ImageWithFallback
                   src={filteredPhotos[currentImageIndex].src}
                   alt={filteredPhotos[currentImageIndex].caption}
-                  className="max-w-full max-h-full w-auto h-auto object-contain"
+                  className="w-auto h-auto object-contain"
+                  style={{ 
+                    maxWidth: isMobile ? '100%' : '95vw',
+                    maxHeight: isMobile ? '100%' : '95vh',
+                    width: isMobile ? 'auto' : '95vw',
+                    height: isMobile ? 'auto' : '95vh'
+                  }}
                 />
                 
                 {/* Image Info */}
@@ -549,7 +555,7 @@ export default function AppOption1SubTabs() {
                         <ImageWithFallback 
                           src={item.src} 
                           alt={item.caption}
-                          className="w-full h-full object-contain md:grayscale md:group-hover:grayscale-0 transition-all duration-500 ease-in-out group-hover:scale-105"
+                          className="w-full h-full object-contain transition-all duration-500 ease-in-out group-hover:scale-105"
                         />
                       </div>
                       <div className="mt-2 flex justify-between items-center pb-1">
