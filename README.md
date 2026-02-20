@@ -1,11 +1,35 @@
+# Portfolio Website
 
-  # Retro 90s Zine Landing Page (Copy)
+A modern, retro-inspired portfolio website built with React, TypeScript, and Vite.
 
-  This is a code bundle for Retro 90s Zine Landing Page (Copy). The original project is available at https://www.figma.com/design/0ZHnUPBYvwHax1Fb4s6gPA/Retro-90s-Zine-Landing-Page--Copy-.
+## Tech Stack
 
-  ## Running the code
+- React
+- TypeScript
+- Vite
+- Tailwind CSS
 
-  Run `npm i` to install the dependencies.
+## Getting Started
 
-  Run `npm run dev` to start the development server.
-  
+Install dependencies:
+```bash
+npm install
+```
+
+Start the development server:
+```bash
+npm run dev
+```
+
+Build for production:
+```bash
+npm run build
+```
+
+## Author
+
+**codedbyjt**
+
+---
+
+© 2026 codedbyjt. All rights reserved.
