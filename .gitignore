@@ -1,1 +1,32 @@
+# Dependencies
 node_modules
+
+# Build output
+dist
+build
+
+# macOS system files
+.DS_Store
+
+# IDE
+.vscode/*
+!.vscode/extensions.json
+.idea
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Deployment
+.vercel
+.vercel-deploy
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Optional: package-lock.json (uncomment if you want to ignore it)
+# package-lock.json
