@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play } from 'lucide-react';
+import { Play, Instagram, Facebook, Linkedin } from 'lucide-react';
 import Masonry, { ResponsiveMasonry } from 'react-responsive-masonry';
 import { ImageWithFallback } from './components/figma/ImageWithFallback';
 
@@ -65,7 +65,7 @@ const FILM_ITEMS = [
   },
   {
     id: 3,
-    src: "https://images.unsplash.com/photo-1478720568477-152d9b164e63?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwzfHxjaTmZW1hdGljJTIwdmlkZWQlMjBshovdG9ncmFwaHl8ZW58MXx8fHwxNzY5NzU4NTgyfDA&ixlib=rb-4.1.0&q=80&w=1080",
+    src: "https://images.unsplash.com/photo-1478720568477-152d9b164e63?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwzfHxjaTmZW1hdGljJTIwdmlkZWQlMjBshovdG9ncmFpaHl8ZW58MXx8fHwxNzY5NzU4NTgyfDA&ixlib=rb-4.1.0&q=80&w=1080",
     title: "ECHOES",
     role: "DIRECTOR",
     year: "2023",
@@ -159,7 +159,7 @@ export default function AppOption1SubTabs() {
             >
               VIC LENTAIGNE
             </h1>
-            <div className="w-full h-1 bg-[#00ff00] mt-1"></div>
+            <div className="w-full h-0.5 bg-[#00ff00] mt-1"></div>
           </div>
           
           {/* Fancy Menu Button */}
@@ -206,111 +206,127 @@ export default function AppOption1SubTabs() {
               className="fixed top-0 right-0 h-full w-full md:w-96 bg-white border-l-4 border-[#00ff00] z-50 shadow-[-10px_0_50px_rgba(0,255,0,0.2)]"
             >
               <div className="p-8 h-full flex flex-col">
-                {/* Close Button */}
-                <button
-                  onClick={() => setIsMenuOpen(false)}
-                  className="self-end w-10 h-10 flex items-center justify-center mb-8 group"
-                  aria-label="Close menu"
-                >
-                  <span className="text-3xl font-black text-[#00ff00] group-hover:rotate-90 transition-transform">×</span>
-                </button>
+                {/* Header and Close Button */}
+                <div className="flex items-start justify-between mb-4">
+                  <h2 
+                    className="text-3xl md:text-4xl font-black uppercase tracking-tighter text-transparent" 
+                    style={{ WebkitTextStroke: "2px #00ff00" }}
+                  >
+                    VIC LENTAIGNE
+                  </h2>
+                  
+                  <button
+                    onClick={() => setIsMenuOpen(false)}
+                    className="w-10 h-10 flex items-center justify-center group"
+                    aria-label="Close menu"
+                  >
+                    <span className="text-3xl font-black text-[#00ff00] group-hover:rotate-90 transition-transform">×</span>
+                  </button>
+                </div>
+                <div className="w-full h-0.5 bg-[#00ff00] mb-8"></div>
 
                 {/* Menu Items */}
                 <nav className="flex-1 flex flex-col gap-6">
-                  <motion.button
+                  <motion.div
                     initial={{ x: 50, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
                     transition={{ delay: 0.1 }}
+                    className="relative text-left"
+                  >
+                    <div className="inline-block">
+                      <span className="text-3xl md:text-4xl font-black uppercase tracking-tighter text-[#00ff00]"
+                        style={{ WebkitTextStroke: "2px #00ff00" }}
+                      >
+                        Portfolio
+                      </span>
+                      <div className="h-0.5 bg-[#00ff00] mt-2 w-full" />
+                    </div>
+                  </motion.div>
+
+                  <motion.button
+                    initial={{ x: 50, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: 0.15 }}
                     onClick={() => {
                       setIsMenuOpen(false);
                       navigate('/about');
                     }}
-                    className="group relative text-left w-full"
+                    className="group relative text-left"
                   >
-                    <span className="text-4xl md:text-5xl font-black uppercase tracking-tighter text-transparent group-hover:text-[#00ff00] transition-all duration-300"
+                    <span className="text-3xl md:text-4xl font-black uppercase tracking-tighter text-transparent group-hover:text-[#00ff00] transition-all duration-300"
                       style={{ WebkitTextStroke: "2px #00ff00" }}
                     >
                       About
                     </span>
                     <motion.div 
-                      className="h-1 bg-[#00ff00] mt-2"
+                      className="h-0.5 bg-[#00ff00] mt-2"
                       initial={{ width: 0 }}
                       whileHover={{ width: '100%' }}
                       transition={{ duration: 0.3 }}
                     />
                   </motion.button>
 
-                  <motion.a
+                  <motion.button
                     initial={{ x: 50, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
                     transition={{ delay: 0.2 }}
-                    href="#shop"
-                    onClick={() => setIsMenuOpen(false)}
-                    className="group relative"
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      navigate('/shop');
+                    }}
+                    className="group relative text-left"
                   >
-                    <span className="text-4xl md:text-5xl font-black uppercase tracking-tighter text-transparent group-hover:text-[#00ff00] transition-all duration-300"
+                    <span className="text-3xl md:text-4xl font-black uppercase tracking-tighter text-transparent group-hover:text-[#00ff00] transition-all duration-300"
                       style={{ WebkitTextStroke: "2px #00ff00" }}
                     >
                       Shop
                     </span>
                     <motion.div 
-                      className="h-1 bg-[#00ff00] mt-2"
+                      className="h-0.5 bg-[#00ff00] mt-2"
                       initial={{ width: 0 }}
                       whileHover={{ width: '100%' }}
                       transition={{ duration: 0.3 }}
                     />
-                  </motion.a>
-
-                  <motion.a
-                    initial={{ x: 50, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: 0.3 }}
-                    href="#contact"
-                    onClick={() => setIsMenuOpen(false)}
-                    className="group relative"
-                  >
-                    <span className="text-4xl md:text-5xl font-black uppercase tracking-tighter text-transparent group-hover:text-[#00ff00] transition-all duration-300"
-                      style={{ WebkitTextStroke: "2px #00ff00" }}
-                    >
-                      Contact
-                    </span>
-                    <motion.div 
-                      className="h-1 bg-[#00ff00] mt-2"
-                      initial={{ width: 0 }}
-                      whileHover={{ width: '100%' }}
-                      transition={{ duration: 0.3 }}
-                    />
-                  </motion.a>
-
-                  <motion.a
-                    initial={{ x: 50, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: 0.4 }}
-                    href="#instagram"
-                    onClick={() => setIsMenuOpen(false)}
-                    className="group relative"
-                  >
-                    <span className="text-4xl md:text-5xl font-black uppercase tracking-tighter text-transparent group-hover:text-[#00ff00] transition-all duration-300"
-                      style={{ WebkitTextStroke: "2px #00ff00" }}
-                    >
-                      Instagram
-                    </span>
-                    <motion.div 
-                      className="h-1 bg-[#00ff00] mt-2"
-                      initial={{ width: 0 }}
-                      whileHover={{ width: '100%' }}
-                      transition={{ duration: 0.3 }}
-                    />
-                  </motion.a>
+                  </motion.button>
                 </nav>
 
-                {/* Menu Footer */}
+                {/* Social Media Icons */}
                 <motion.div
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.5 }}
+                  transition={{ delay: 0.4 }}
                   className="border-t-2 border-[#00ff00] pt-6 mt-6"
                 >
+                  <div className="flex gap-6 mb-6">
+                    <a 
+                      href="https://instagram.com" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="hover:scale-110 transition-transform"
+                      aria-label="Instagram"
+                    >
+                      <Instagram className="w-8 h-8 text-[#00ff00]" strokeWidth={1.5} />
+                    </a>
+                    <a 
+                      href="https://facebook.com" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="hover:scale-110 transition-transform"
+                      aria-label="Facebook"
+                    >
+                      <Facebook className="w-8 h-8 text-[#00ff00]" strokeWidth={1.5} />
+                    </a>
+                    <a 
+                      href="https://linkedin.com" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="hover:scale-110 transition-transform"
+                      aria-label="LinkedIn"
+                    >
+                      <Linkedin className="w-8 h-8 text-[#00ff00]" strokeWidth={1.5} />
+                    </a>
+                  </div>
+
                   <p className="font-mono text-xs uppercase tracking-widest text-gray-600">
                     Available for commissions
                   </p>
