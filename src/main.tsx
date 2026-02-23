@@ -6,6 +6,7 @@ import ShopPage from "./app/ShopPage.tsx";
 import ProductPage from "./app/ProductPage.tsx";
 import { CartProvider } from "./app/CartContext.tsx";
 import "./styles/index.css";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 createRoot(document.getElementById("root")!).render(
   <CartProvider>
@@ -16,6 +17,7 @@ createRoot(document.getElementById("root")!).render(
         <Route path="/shop" element={<ShopPage />} />
         <Route path="/shop/:id" element={<ProductPage />} />
       </Routes>
+      <SpeedInsights />
     </BrowserRouter>
   </CartProvider>
 );

@@ -15,6 +15,7 @@ interface CartContextType {
   updateQuantity: (id: number, quantity: number) => void;
   clearCart: () => void;
   getTotalItems: () => number;
+  getTotalPrice: () => string;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -60,6 +61,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return cart.reduce((total, item) => total + item.quantity, 0);
   };
 
+  const getTotalPrice = () => {
+    const total = cart.reduce((sum, item) => {
+      // Extract numeric value from price string (e.g., "£18" -> 18)
+      const price = parseFloat(item.price.replace(/[^0-9.]/g, ''));
+      return sum + (price * item.quantity);
+    }, 0);
+    return `£${total.toFixed(2)}`;
+  };
+
   return (
     <CartContext.Provider
       value={{
@@ -69,6 +79,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         updateQuantity,
         clearCart,
         getTotalItems,
+        getTotalPrice,
       }}
     >
       {children}
