@@ -17,7 +17,7 @@ createRoot(document.getElementById("root")!).render(
         <Route path="/shop" element={<ShopPage />} />
         <Route path="/shop/:id" element={<ProductPage />} />
       </Routes>
-      <SpeedInsights />
     </BrowserRouter>
+    <SpeedInsights />
   </CartProvider>
 );
