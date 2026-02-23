@@ -96,20 +96,20 @@ export default function ProductPage() {
           </div>
 
           {/* Cart Icon */}
-          {totalItems > 0 && (
-            <motion.button
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              onClick={() => setIsCartOpen(!isCartOpen)}
-              className="relative mx-4 md:mx-6"
-              aria-label="Shopping cart"
-            >
-              <ShoppingCart className="w-6 h-6 md:w-7 md:h-7 text-[#00ff00]" strokeWidth={1.5} />
+          <motion.button
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            onClick={() => setIsCartOpen(!isCartOpen)}
+            className="relative mx-4 md:mx-6"
+            aria-label="Shopping cart"
+          >
+            <ShoppingCart className="w-6 h-6 md:w-7 md:h-7 text-[#00ff00]" strokeWidth={1.5} />
+            {totalItems > 0 && (
               <span className="absolute -top-2 -right-2 bg-black text-[#00ff00] rounded-full w-6 h-6 flex items-center justify-center text-xs font-black border-2 border-[#00ff00]">
                 {totalItems}
               </span>
-            </motion.button>
-          )}
+            )}
+          </motion.button>
         </div>
       </motion.header>
 
