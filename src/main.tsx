@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Analytics } from "@vercel/analytics/react";
 import App from "./app/AppOption1SubTabs.tsx";
 import AboutPage from "./app/AboutPage.tsx";
 import ShopPage from "./app/ShopPage.tsx";
@@ -16,6 +17,7 @@ createRoot(document.getElementById("root")!).render(
         <Route path="/shop" element={<ShopPage />} />
         <Route path="/shop/:id" element={<ProductPage />} />
       </Routes>
+      <Analytics />
     </BrowserRouter>
   </CartProvider>
 );
