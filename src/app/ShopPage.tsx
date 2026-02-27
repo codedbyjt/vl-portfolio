@@ -444,11 +444,11 @@ export default function ShopPage() {
                   onClick={() => handleProductClick(item.id)}
                 >
                   {/* Product Image */}
-                  <div className="relative overflow-hidden bg-white h-[400px] flex items-center justify-center mb-4">
+                  <div className="relative overflow-hidden bg-white flex items-center justify-center mb-4">
                     <ImageWithFallback 
                       src={item.image}
                       alt={item.title}
-                      className="w-full h-full object-contain"
+                      className="w-full h-auto object-contain"
                     />
                   </div>
 
