@@ -413,139 +413,119 @@ export default function AppOption1SubTabs() {
         )}
       </AnimatePresence>
 
-      {/* Main Tab Navigation */}
+      {/* Compact Navigation Bar */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="fixed top-[85px] md:top-[120px] lg:top-[160px] left-0 right-0 z-40 px-4 md:px-8 pb-1"
+        className="fixed top-[70px] md:top-[100px] lg:top-[130px] left-0 right-0 z-40 px-4 md:px-8 py-2"
         style={{ backgroundColor: 'white' }}
       >
         <div className="absolute inset-0 bg-white -z-10"></div>
-        <div className="max-w-7xl mx-auto flex gap-3 md:gap-4 relative z-10">
+        <div className="max-w-7xl mx-auto flex flex-wrap items-center gap-3 relative z-10">
+          {/* Main Section Toggle */}
           <button
-            onClick={() => setActiveTab('photo')}
-            className={`relative px-4 md:px-6 lg:px-8 py-2 md:py-3 border-3 border-black font-black uppercase text-sm md:text-base lg:text-xl tracking-tight transition-all duration-300 ${
-              activeTab === 'photo'
-                ? 'bg-[#00ff00] text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] translate-y-0'
-                : 'bg-white text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
-            }`}
+            onClick={() => setActiveTab(activeTab === 'photo' ? 'film' : 'photo')}
+            className="px-4 md:px-5 py-2 border-2 border-black bg-[#00ff00] text-black font-black uppercase text-xs md:text-sm tracking-tight shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[-2px] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] transition-all flex items-center gap-2"
           >
-            Photography
+            {activeTab === 'photo' ? 'Photography' : 'Film & Direction'}
+            <span className="text-xs">▼</span>
           </button>
-          <button
-            onClick={() => setActiveTab('film')}
-            className={`relative px-4 md:px-6 lg:px-8 py-2 md:py-3 border-3 border-black font-black uppercase text-sm md:text-base lg:text-xl tracking-tight transition-all duration-300 ${
-              activeTab === 'film'
-                ? 'bg-[#00ff00] text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] translate-y-0'
-                : 'bg-white text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
-            }`}
-          >
-            Film & Direction
-          </button>
+
+          {/* Divider */}
+          <div className="h-6 w-px bg-gray-300 hidden md:block"></div>
+
+          {/* Photo Sub-categories */}
+          {activeTab === 'photo' && (
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="flex gap-2"
+            >
+              <button
+                onClick={() => setPhotoCategory('editorial')}
+                className={`px-3 md:px-4 py-1.5 border-2 border-black font-mono uppercase text-[10px] md:text-xs tracking-tight transition-all ${
+                  photoCategory === 'editorial'
+                    ? 'bg-black text-[#00ff00]'
+                    : 'bg-white text-black hover:bg-gray-100'
+                }`}
+              >
+                Editorial
+              </button>
+              <button
+                onClick={() => setPhotoCategory('personal')}
+                className={`px-3 md:px-4 py-1.5 border-2 border-black font-mono uppercase text-[10px] md:text-xs tracking-tight transition-all ${
+                  photoCategory === 'personal'
+                    ? 'bg-black text-[#00ff00]'
+                    : 'bg-white text-black hover:bg-gray-100'
+                }`}
+              >
+                Personal
+              </button>
+              <button
+                onClick={() => setPhotoCategory('commercial')}
+                className={`px-3 md:px-4 py-1.5 border-2 border-black font-mono uppercase text-[10px] md:text-xs tracking-tight transition-all ${
+                  photoCategory === 'commercial'
+                    ? 'bg-black text-[#00ff00]'
+                    : 'bg-white text-black hover:bg-gray-100'
+                }`}
+              >
+                Commercial
+              </button>
+            </motion.div>
+          )}
+
+          {/* Film Sub-categories */}
+          {activeTab === 'film' && (
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="flex gap-2"
+            >
+              <button
+                onClick={() => setFilmCategory('shorts')}
+                className={`px-3 md:px-4 py-1.5 border-2 border-black font-mono uppercase text-[10px] md:text-xs tracking-tight transition-all ${
+                  filmCategory === 'shorts'
+                    ? 'bg-black text-[#00ff00]'
+                    : 'bg-white text-black hover:bg-gray-100'
+                }`}
+              >
+                Shorts
+              </button>
+              <button
+                onClick={() => setFilmCategory('docs')}
+                className={`px-3 md:px-4 py-1.5 border-2 border-black font-mono uppercase text-[10px] md:text-xs tracking-tight transition-all ${
+                  filmCategory === 'docs'
+                    ? 'bg-black text-[#00ff00]'
+                    : 'bg-white text-black hover:bg-gray-100'
+                }`}
+              >
+                Docs
+              </button>
+              <button
+                onClick={() => setFilmCategory('film')}
+                className={`px-3 md:px-4 py-1.5 border-2 border-black font-mono uppercase text-[10px] md:text-xs tracking-tight transition-all ${
+                  filmCategory === 'film'
+                    ? 'bg-black text-[#00ff00]'
+                    : 'bg-white text-black hover:bg-gray-100'
+                }`}
+              >
+                Film
+              </button>
+            </motion.div>
+          )}
+
+          {/* Info Text */}
+          <div className="ml-auto hidden lg:block">
+            <p className="font-mono text-[10px] uppercase tracking-widest text-gray-400">
+              {activeTab === 'photo' ? 'Selected Works 1999–2026' : 'Reel 2026'}
+            </p>
+          </div>
         </div>
       </motion.div>
 
-      {/* Sub-tabs - Sticky */}
-      <div className="fixed top-[140px] md:top-[180px] lg:top-[220px] left-0 right-0 z-30 px-4 md:px-8 py-2" style={{ backgroundColor: 'white' }}>
-        <div className="absolute inset-0 bg-white -z-10"></div>
-        <div className="max-w-7xl mx-auto relative z-10">
-          <AnimatePresence mode="wait">
-            {activeTab === 'photo' && (
-              <motion.div
-                key="photo-subtabs"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={{ duration: 0.3 }}
-                className="flex flex-col md:flex-row md:justify-between md:items-center gap-4"
-              >
-                <div className="flex gap-4 md:gap-6">
-                  <button
-                    onClick={() => setPhotoCategory('editorial')}
-                    className={`font-mono text-xs md:text-sm uppercase tracking-widest transition-colors ${
-                      photoCategory === 'editorial'
-                        ? 'text-black font-bold underline decoration-2 underline-offset-4'
-                        : 'text-gray-400 hover:text-gray-600'
-                    }`}
-                  >
-                    Editorial
-                  </button>
-                  <button
-                    onClick={() => setPhotoCategory('personal')}
-                    className={`font-mono text-xs md:text-sm uppercase tracking-widest transition-colors ${
-                      photoCategory === 'personal'
-                        ? 'text-black font-bold underline decoration-2 underline-offset-4'
-                        : 'text-gray-400 hover:text-gray-600'
-                    }`}
-                  >
-                    Personal
-                  </button>
-                  <button
-                    onClick={() => setPhotoCategory('commercial')}
-                    className={`font-mono text-xs md:text-sm uppercase tracking-widest transition-colors ${
-                      photoCategory === 'commercial'
-                        ? 'text-black font-bold underline decoration-2 underline-offset-4'
-                        : 'text-gray-400 hover:text-gray-600'
-                    }`}
-                  >
-                    Commercial
-                  </button>
-                </div>
-                <span className="font-mono text-[10px] md:text-xs uppercase tracking-widest text-gray-500">Selected Works 1999—2026</span>
-              </motion.div>
-            )}
-            
-            {activeTab === 'film' && (
-              <motion.div
-                key="film-subtabs"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.3 }}
-                className="flex flex-col md:flex-row md:justify-between md:items-center gap-4"
-              >
-                <div className="flex gap-4 md:gap-6">
-                  <button
-                    onClick={() => setFilmCategory('shorts')}
-                    className={`font-mono text-xs md:text-sm uppercase tracking-widest transition-colors ${
-                      filmCategory === 'shorts'
-                        ? 'text-black font-bold underline decoration-2 underline-offset-4'
-                        : 'text-gray-400 hover:text-gray-600'
-                    }`}
-                  >
-                    Shorts
-                  </button>
-                  <button
-                    onClick={() => setFilmCategory('docs')}
-                    className={`font-mono text-xs md:text-sm uppercase tracking-widest transition-colors ${
-                      filmCategory === 'docs'
-                        ? 'text-black font-bold underline decoration-2 underline-offset-4'
-                        : 'text-gray-400 hover:text-gray-600'
-                    }`}
-                  >
-                    Docs
-                  </button>
-                  <button
-                    onClick={() => setFilmCategory('film')}
-                    className={`font-mono text-xs md:text-sm uppercase tracking-widest transition-colors ${
-                      filmCategory === 'film'
-                        ? 'text-black font-bold underline decoration-2 underline-offset-4'
-                        : 'text-gray-400 hover:text-gray-600'
-                    }`}
-                  >
-                    Film
-                  </button>
-                </div>
-                <span className="font-mono text-[10px] md:text-xs uppercase tracking-widest text-gray-600">Reel 2026</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </div>
-
       {/* Content Area */}
-      <div className="fixed top-[185px] md:top-[240px] lg:top-[280px] bottom-[40px] left-0 right-0 overflow-y-auto bg-white">
+      <div className="fixed top-[120px] md:top-[145px] lg:top-[175px] bottom-[40px] left-0 right-0 overflow-y-auto bg-white">
         <div className="px-4 md:px-8 py-8">
           <div className="max-w-7xl mx-auto">
           
