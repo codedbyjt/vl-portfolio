@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Instagram, Facebook, Linkedin } from 'lucide-react';
 import Masonry, { ResponsiveMasonry } from 'react-responsive-masonry';
@@ -95,9 +95,20 @@ function useIsMobile() {
 
 export default function AppOption1SubTabs() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<'photo' | 'film'>('photo');
   const [photoCategory, setPhotoCategory] = useState<'editorial' | 'personal' | 'commercial'>('editorial');
   const [filmCategory, setFilmCategory] = useState<'shorts' | 'docs' | 'film'>('shorts');
+  
+  // Check URL parameters on mount
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'film') {
+      setActiveTab('film');
+    } else if (tab === 'photo') {
+      setActiveTab('photo');
+    }
+  }, [searchParams]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);

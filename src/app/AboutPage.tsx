@@ -21,7 +21,7 @@ export default function AboutPage() {
       <motion.header 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="fixed top-0 left-0 right-0 px-4 pt-4 pb-3 md:px-8 md:pt-6 md:pb-4 lg:pt-8 lg:pb-6 z-40 bg-white"
+        className="fixed top-0 left-0 right-0 px-3 pt-2 pb-1 md:px-6 md:pt-3 md:pb-2 lg:pt-4 lg:pb-2 z-40 bg-white"
       >
         <div className="max-w-4xl mx-auto flex items-center justify-end gap-4 md:gap-8">
           <div className="flex-1 flex justify-end">
@@ -32,27 +32,27 @@ export default function AboutPage() {
               >
                 About
               </h1>
-              <div className="w-full h-0.5 bg-[#00ff00] mt-1"></div>
+              <div className="w-full h-0.5 bg-[#00ff00] mt-0.5"></div>
             </div>
           </div>
           
           {/* Fancy Menu Button */}
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="relative w-12 h-12 md:w-14 md:h-14 flex flex-col items-center justify-center gap-1.5 group"
+            className="relative w-10 h-10 md:w-12 md:h-12 flex flex-col items-center justify-center gap-1 group"
             aria-label="Menu"
           >
             <motion.span
-              animate={isMenuOpen ? { rotate: 45, y: 8 } : { rotate: 0, y: 0 }}
-              className="w-8 h-0.5 bg-[#00ff00] transition-all group-hover:w-10"
+              animate={isMenuOpen ? { rotate: 45, y: 6 } : { rotate: 0, y: 0 }}
+              className="w-6 h-0.5 bg-[#00ff00] transition-all group-hover:w-8"
             />
             <motion.span
               animate={isMenuOpen ? { opacity: 0 } : { opacity: 1 }}
-              className="w-8 h-0.5 bg-[#00ff00] transition-all group-hover:w-10"
+              className="w-6 h-0.5 bg-[#00ff00] transition-all group-hover:w-8"
             />
             <motion.span
-              animate={isMenuOpen ? { rotate: -45, y: -8 } : { rotate: 0, y: 0 }}
-              className="w-8 h-0.5 bg-[#00ff00] transition-all group-hover:w-10"
+              animate={isMenuOpen ? { rotate: -45, y: -6 } : { rotate: 0, y: 0 }}
+              className="w-6 h-0.5 bg-[#00ff00] transition-all group-hover:w-8"
             />
           </button>
         </div>
@@ -83,7 +83,7 @@ export default function AboutPage() {
                 {/* Header and Close Button */}
                 <div className="flex items-start justify-between mb-4">
                   <h2 
-                    className="text-3xl md:text-4xl font-black uppercase tracking-tighter text-transparent" 
+                    className="text-3xl md:text-4xl font-bold uppercase tracking-tighter text-transparent" 
                     style={{ WebkitTextStroke: "2px #00ff00" }}
                   >
                     VIC LENTAIGNE
@@ -111,10 +111,56 @@ export default function AboutPage() {
                     }}
                     className="group relative text-left"
                   >
-                    <span className="text-3xl md:text-4xl font-black uppercase tracking-tighter text-transparent group-hover:text-[#00ff00] transition-all duration-300"
+                    <span className="text-3xl md:text-4xl font-bold uppercase tracking-tighter text-transparent group-hover:text-[#00ff00] transition-all duration-300"
                       style={{ WebkitTextStroke: "2px #00ff00" }}
                     >
-                      Portfolio
+                      Home
+                    </span>
+                    <motion.div 
+                      className="h-0.5 bg-[#00ff00] mt-2"
+                      initial={{ width: 0 }}
+                      whileHover={{ width: '100%' }}
+                      transition={{ duration: 0.3 }}
+                    />
+                  </motion.button>
+
+                  <motion.button
+                    initial={{ x: 50, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: 0.15 }}
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      navigate('/photography');
+                    }}
+                    className="group relative text-left"
+                  >
+                    <span className="text-3xl md:text-4xl font-bold uppercase tracking-tighter text-transparent group-hover:text-[#00ff00] transition-all duration-300"
+                      style={{ WebkitTextStroke: "2px #00ff00" }}
+                    >
+                      Photography
+                    </span>
+                    <motion.div 
+                      className="h-0.5 bg-[#00ff00] mt-2"
+                      initial={{ width: 0 }}
+                      whileHover={{ width: '100%' }}
+                      transition={{ duration: 0.3 }}
+                    />
+                  </motion.button>
+
+                  <motion.button
+                    initial={{ x: 50, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      navigate('/film');
+                    }}
+                    className="group relative text-left"
+                  >
+                    <span className="text-3xl md:text-4xl font-bold uppercase tracking-tighter text-transparent group-hover:text-[#00ff00] transition-all duration-300"
+                      style={{ WebkitTextStroke: "2px #00ff00" }}
+                    >
+                      Film & Direction
                     </span>
                     <motion.div 
                       className="h-0.5 bg-[#00ff00] mt-2"
@@ -127,11 +173,11 @@ export default function AboutPage() {
                   <motion.div
                     initial={{ x: 50, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: 0.15 }}
+                    transition={{ delay: 0.25 }}
                     className="relative text-left"
                   >
                     <div className="inline-block">
-                      <span className="text-3xl md:text-4xl font-black uppercase tracking-tighter text-[#00ff00]"
+                      <span className="text-3xl md:text-4xl font-bold uppercase tracking-tighter text-[#00ff00]"
                         style={{ WebkitTextStroke: "2px #00ff00" }}
                       >
                         About
@@ -143,14 +189,14 @@ export default function AboutPage() {
                   <motion.button
                     initial={{ x: 50, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: 0.2 }}
+                    transition={{ delay: 0.3 }}
                     onClick={() => {
                       setIsMenuOpen(false);
                       navigate('/shop');
                     }}
                     className="group relative text-left"
                   >
-                    <span className="text-3xl md:text-4xl font-black uppercase tracking-tighter text-transparent group-hover:text-[#00ff00] transition-all duration-300"
+                    <span className="text-3xl md:text-4xl font-bold uppercase tracking-tighter text-transparent group-hover:text-[#00ff00] transition-all duration-300"
                       style={{ WebkitTextStroke: "2px #00ff00" }}
                     >
                       Shop
@@ -169,9 +215,9 @@ export default function AboutPage() {
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.4 }}
-                  className="border-t-2 border-[#00ff00] pt-6 mt-6"
+                  className="border-t-2 border-[#00ff00] pt-6 mt-6 text-center"
                 >
-                  <div className="flex gap-6 mb-6">
+                  <div className="flex gap-6 mb-6 justify-center">
                     <a 
                       href="https://instagram.com" 
                       target="_blank" 
