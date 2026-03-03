@@ -504,14 +504,14 @@ export default function PhotographyPage() {
                   className="cursor-pointer"
                   onClick={() => openLightbox(index)}
                 >
-                  <div className="relative mb-1 flex justify-center">
+                  <div className="relative mb-1">
                     <ImageWithFallback 
                       src={photo.src}
                       alt={photo.caption}
-                      className="max-w-full h-auto object-contain max-h-[calc(100vh-180px)] md:max-h-[calc(100vh-200px)] lg:max-h-[calc(100vh-160px)]"
+                      className="w-full h-auto object-contain max-h-[calc(100vh-180px)] md:max-h-[calc(100vh-200px)] lg:max-h-[calc(100vh-160px)]"
                     />
                   </div>
-                  <div className="flex justify-between items-center pt-2 px-4">
+                  <div className="flex justify-between items-center pt-2">
                     <p className="font-mono text-xs uppercase tracking-normal text-black">
                       {photo.caption}
                     </p>
