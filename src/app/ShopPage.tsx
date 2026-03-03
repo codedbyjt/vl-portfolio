@@ -69,18 +69,18 @@ export default function ShopPage() {
       <motion.header 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="fixed top-0 left-0 right-0 px-4 pt-4 pb-3 md:px-8 md:pt-6 md:pb-4 lg:pt-8 lg:pb-6 z-40 bg-white"
+        className="fixed top-0 left-0 right-0 px-3 pt-2 pb-1 md:px-6 md:pt-3 md:pb-2 lg:pt-4 lg:pb-2 z-40 bg-white"
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex-1">
             <button 
               onClick={() => navigate('/')}
-              className="text-3xl md:text-5xl lg:text-7xl font-black uppercase tracking-tighter text-transparent hover:text-[#00ff00] transition-colors cursor-pointer" 
+              className="text-2xl md:text-4xl lg:text-5xl font-black uppercase tracking-tighter text-transparent hover:text-[#00ff00] transition-colors cursor-pointer" 
               style={{ WebkitTextStroke: "2px #00ff00" }}
             >
               VIC LENTAIGNE
             </button>
-            <div className="w-full h-0.5 bg-[#00ff00] mt-2"></div>
+            <div className="w-full h-0.5 bg-[#00ff00] mt-0.5"></div>
           </div>
 
           {/* Cart Icon */}
@@ -146,7 +146,7 @@ export default function ShopPage() {
                 {/* Header and Close Button */}
                 <div className="flex items-start justify-between mb-4">
                   <h2 
-                    className="text-3xl md:text-4xl font-black uppercase tracking-tighter text-transparent" 
+                    className="text-3xl md:text-4xl font-bold uppercase tracking-tighter text-transparent" 
                     style={{ WebkitTextStroke: "2px #00ff00" }}
                   >
                     VIC LENTAIGNE
@@ -174,10 +174,10 @@ export default function ShopPage() {
                     }}
                     className="group relative text-left"
                   >
-                    <span className="text-3xl md:text-4xl font-black uppercase tracking-tighter text-transparent group-hover:text-[#00ff00] transition-all duration-300"
+                    <span className="text-3xl md:text-4xl font-bold uppercase tracking-tighter text-transparent group-hover:text-[#00ff00] transition-all duration-300"
                       style={{ WebkitTextStroke: "2px #00ff00" }}
                     >
-                      Portfolio
+                      Home
                     </span>
                     <motion.div 
                       className="h-0.5 bg-[#00ff00] mt-2"
@@ -193,11 +193,57 @@ export default function ShopPage() {
                     transition={{ delay: 0.15 }}
                     onClick={() => {
                       setIsMenuOpen(false);
+                      navigate('/photography');
+                    }}
+                    className="group relative text-left"
+                  >
+                    <span className="text-3xl md:text-4xl font-bold uppercase tracking-tighter text-transparent group-hover:text-[#00ff00] transition-all duration-300"
+                      style={{ WebkitTextStroke: "2px #00ff00" }}
+                    >
+                      Photography
+                    </span>
+                    <motion.div 
+                      className="h-0.5 bg-[#00ff00] mt-2"
+                      initial={{ width: 0 }}
+                      whileHover={{ width: '100%' }}
+                      transition={{ duration: 0.3 }}
+                    />
+                  </motion.button>
+
+                  <motion.button
+                    initial={{ x: 50, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      navigate('/film');
+                    }}
+                    className="group relative text-left"
+                  >
+                    <span className="text-3xl md:text-4xl font-bold uppercase tracking-tighter text-transparent group-hover:text-[#00ff00] transition-all duration-300"
+                      style={{ WebkitTextStroke: "2px #00ff00" }}
+                    >
+                      Film & Direction
+                    </span>
+                    <motion.div 
+                      className="h-0.5 bg-[#00ff00] mt-2"
+                      initial={{ width: 0 }}
+                      whileHover={{ width: '100%' }}
+                      transition={{ duration: 0.3 }}
+                    />
+                  </motion.button>
+
+                  <motion.button
+                    initial={{ x: 50, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: 0.25 }}
+                    onClick={() => {
+                      setIsMenuOpen(false);
                       navigate('/about');
                     }}
                     className="group relative text-left"
                   >
-                    <span className="text-3xl md:text-4xl font-black uppercase tracking-tighter text-transparent group-hover:text-[#00ff00] transition-all duration-300"
+                    <span className="text-3xl md:text-4xl font-bold uppercase tracking-tighter text-transparent group-hover:text-[#00ff00] transition-all duration-300"
                       style={{ WebkitTextStroke: "2px #00ff00" }}
                     >
                       About
@@ -213,11 +259,11 @@ export default function ShopPage() {
                   <motion.div
                     initial={{ x: 50, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: 0.2 }}
+                    transition={{ delay: 0.3 }}
                     className="relative text-left"
                   >
                     <div className="inline-block">
-                      <span className="text-3xl md:text-4xl font-black uppercase tracking-tighter text-[#00ff00]"
+                      <span className="text-3xl md:text-4xl font-bold uppercase tracking-tighter text-[#00ff00]"
                         style={{ WebkitTextStroke: "2px #00ff00" }}
                       >
                         Shop
@@ -232,9 +278,9 @@ export default function ShopPage() {
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.4 }}
-                  className="border-t-2 border-[#00ff00] pt-6 mt-6"
+                  className="border-t-2 border-[#00ff00] pt-6 mt-6 text-center"
                 >
-                  <div className="flex gap-6 mb-6">
+                  <div className="flex gap-6 mb-6 justify-center">
                     <a 
                       href="https://instagram.com" 
                       target="_blank" 
@@ -444,11 +490,11 @@ export default function ShopPage() {
                   onClick={() => handleProductClick(item.id)}
                 >
                   {/* Product Image */}
-                  <div className="relative overflow-hidden bg-white flex items-center justify-center mb-4">
+                  <div className="relative overflow-hidden bg-white flex items-center justify-center mb-4 h-[400px] md:h-[500px]">
                     <ImageWithFallback 
                       src={item.image}
                       alt={item.title}
-                      className="w-full h-auto object-contain"
+                      className="w-full h-full object-contain"
                     />
                   </div>
 

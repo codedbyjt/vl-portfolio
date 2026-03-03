@@ -81,18 +81,18 @@ export default function ProductPage() {
       <motion.header 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="fixed top-0 left-0 right-0 px-4 pt-4 pb-3 md:px-8 md:pt-6 md:pb-4 lg:pt-8 lg:pb-6 z-40 bg-white"
+        className="fixed top-0 left-0 right-0 px-3 pt-2 pb-1 md:px-6 md:pt-3 md:pb-2 lg:pt-4 lg:pb-2 z-40 bg-white"
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex-1">
             <button 
               onClick={() => navigate('/')}
-              className="text-3xl md:text-5xl lg:text-7xl font-black uppercase tracking-tighter text-transparent hover:text-[#00ff00] transition-colors cursor-pointer" 
+              className="text-2xl md:text-4xl lg:text-5xl font-black uppercase tracking-tighter text-transparent hover:text-[#00ff00] transition-colors cursor-pointer" 
               style={{ WebkitTextStroke: "2px #00ff00" }}
             >
               VIC LENTAIGNE
             </button>
-            <div className="w-full h-1 bg-[#00ff00] mt-2"></div>
+            <div className="w-full h-0.5 bg-[#00ff00] mt-0.5"></div>
           </div>
 
           {/* Cart Icon */}
