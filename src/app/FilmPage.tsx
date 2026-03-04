@@ -283,9 +283,6 @@ export default function FilmPage() {
                     </a>
                   </div>
 
-                  <p className="font-mono text-xs uppercase tracking-widest text-gray-600">
-                    Available for commissions
-                  </p>
                   <p className="font-mono text-xs text-gray-400 mt-2">
                     hello@viclentaigne.com
                   </p>
