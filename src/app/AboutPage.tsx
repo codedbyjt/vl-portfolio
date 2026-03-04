@@ -247,9 +247,6 @@ export default function AboutPage() {
                     </a>
                   </div>
 
-                  <p className="font-mono text-xs uppercase tracking-widest text-gray-600">
-                    Available for commissions
-                  </p>
                   <p className="font-mono text-xs text-gray-400 mt-2">
                     hello@viclentaigne.com
                   </p>
@@ -406,7 +403,7 @@ export default function AboutPage() {
               LET'S WORK TOGETHER
             </h3>
             <p className="text-gray-300 mb-6 max-w-xl">
-              Available for commissions, collaborations, and creative projects worldwide.
+              Open to collaborations and creative projects worldwide.
             </p>
             <div className="flex flex-col md:flex-row gap-4">
               <a 

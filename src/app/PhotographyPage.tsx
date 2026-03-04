@@ -40,6 +40,91 @@ const PHOTO_ITEMS = [
     src: "/hwa-6.webp",
     caption: "EDITORIAL SERIES / 2024",
     category: "editorial"
+  },
+  // Personal category images
+  {
+    id: 7,
+    src: "/PERSONAL/35-14-final03.jpg",
+    caption: "PERSONAL WORK / 2024",
+    category: "personal"
+  },
+  {
+    id: 8,
+    src: "/PERSONAL/CampbellKing_March25 166.jpg",
+    caption: "PERSONAL WORK / 2024",
+    category: "personal"
+  },
+  {
+    id: 9,
+    src: "/PERSONAL/Greece_Milos000098110033.jpg",
+    caption: "PERSONAL WORK / 2024",
+    category: "personal"
+  },
+  {
+    id: 10,
+    src: "/PERSONAL/Vic Lentaigne rose bryony (1).jpg",
+    caption: "PERSONAL WORK / 2024",
+    category: "personal"
+  },
+  {
+    id: 11,
+    src: "/PERSONAL/VicLentaigne-Tboys-Roll6 1024.jpg",
+    caption: "PERSONAL WORK / 2024",
+    category: "personal"
+  },
+  {
+    id: 12,
+    src: "/PERSONAL/VicLentaigne-Tboys-Roll7 1 copy.jpg",
+    caption: "PERSONAL WORK / 2024",
+    category: "personal"
+  },
+  {
+    id: 13,
+    src: "/PERSONAL/VicLentaigne-Tboys-Roll7 copy.jpg",
+    caption: "PERSONAL WORK / 2024",
+    category: "personal"
+  },
+  {
+    id: 14,
+    src: "/PERSONAL/VicLentaigne_capetown_176 (1).jpg",
+    caption: "PERSONAL WORK / 2024",
+    category: "personal"
+  },
+  {
+    id: 15,
+    src: "/PERSONAL/VicLentaigne_capetown_24 copy (1).jpg",
+    caption: "PERSONAL WORK / 2024",
+    category: "personal"
+  },
+  {
+    id: 16,
+    src: "/PERSONAL/VicLentaigne_capetown_247 (1).jpg",
+    caption: "PERSONAL WORK / 2024",
+    category: "personal"
+  },
+  {
+    id: 17,
+    src: "/PERSONAL/greg-viclentaigne (1).jpg",
+    caption: "PERSONAL WORK / 2024",
+    category: "personal"
+  },
+  {
+    id: 18,
+    src: "/PERSONAL/greg2-viclentaigne (1).jpg",
+    caption: "PERSONAL WORK / 2024",
+    category: "personal"
+  },
+  {
+    id: 19,
+    src: "/PERSONAL/immy vicy.jpg",
+    caption: "PERSONAL WORK / 2024",
+    category: "personal"
+  },
+  {
+    id: 20,
+    src: "/PERSONAL/viclentaigne-2.jpg",
+    caption: "PERSONAL WORK / 2024",
+    category: "personal"
   }
 ];
 
@@ -329,9 +414,6 @@ export default function PhotographyPage() {
                     </a>
                   </div>
 
-                  <p className="font-mono text-xs uppercase tracking-widest text-gray-600">
-                    Available for commissions
-                  </p>
                   <p className="font-mono text-xs text-gray-400 mt-2">
                     hello@viclentaigne.com
                   </p>
@@ -379,14 +461,14 @@ export default function PhotographyPage() {
             </button>
 
             {/* Image Container */}
-            <div className="relative w-full h-full flex items-center justify-center p-2 md:p-4">
+            <div className="relative w-full h-full flex items-center justify-center">
               <motion.div
                 key={currentImageIndex}
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ duration: 0.3 }}
-                className="relative w-full h-full max-w-[95vw] max-h-[85vh] md:max-w-[90vw] md:max-h-[90vh] flex items-center justify-center"
+                className="relative w-full h-full max-w-[100vw] max-h-[100vh] flex items-center justify-center"
               >
                 <ImageWithFallback
                   src={filteredPhotos[currentImageIndex].src}
@@ -504,7 +586,7 @@ export default function PhotographyPage() {
                   className="cursor-pointer"
                   onClick={() => openLightbox(index)}
                 >
-                  <div className="relative mb-1">
+                  <div className="relative mb-1 min-h-[500px] md:min-h-[600px] lg:min-h-0 flex items-center justify-center bg-gray-50">
                     <ImageWithFallback 
                       src={photo.src}
                       alt={photo.caption}

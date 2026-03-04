@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Play } from 'lucide-react';
 import Masonry, { ResponsiveMasonry } from 'react-responsive-masonry';
 import { ImageWithFallback } from './components/figma/ImageWithFallback';
+import LoadingScreen from './LoadingScreen';
 
 // --- Data ---
 
@@ -84,10 +85,15 @@ function useIsMobile() {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'photo' | 'film'>('photo');
+  const [isLoading, setIsLoading] = useState(true);
   const isMobile = useIsMobile();
 
   return (
-    <div className="h-screen w-full bg-white relative overflow-hidden font-sans">
+    <>
+      <LoadingScreen onLoadComplete={() => setIsLoading(false)} />
+      
+      {!isLoading && (
+        <div className="h-screen w-full bg-white relative overflow-hidden font-sans">
       
       {/* Background Noise/Texture Overlay */}
       <div className="fixed inset-0 pointer-events-none opacity-[0.03] z-50 bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
@@ -249,6 +255,8 @@ export default function App() {
         </div>
       </footer>
 
-    </div>
+        </div>
+      )}
+    </>
   );
 }
