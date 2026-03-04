@@ -176,6 +176,30 @@ export default function LandingPage() {
                       transition={{ duration: 0.3 }}
                     />
                   </motion.button>
+
+                  <motion.button
+                    initial={{ x: 50, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      navigate('/loading-demo');
+                    }}
+                    className="group relative text-left"
+                  >
+                    <span className="text-xl md:text-2xl font-bold uppercase tracking-tighter text-[#00ff00]/50 group-hover:text-[#00ff00] transition-all duration-300">
+                      Loading Screens
+                    </span>
+                    <span className="ml-2 text-xs font-mono text-[#00ff00]/40 group-hover:text-[#00ff00]/70 transition-colors">
+                      ↗ 9 concepts
+                    </span>
+                    <motion.div 
+                      className="h-0.5 bg-[#00ff00]/50 mt-1"
+                      initial={{ width: 0 }}
+                      whileHover={{ width: '100%' }}
+                      transition={{ duration: 0.3 }}
+                    />
+                  </motion.button>
                 </nav>
 
                 {/* Social Media Icons */}
