@@ -6,6 +6,8 @@ import FilmPage from "./app/FilmPage.tsx";
 import AboutPage from "./app/AboutPage.tsx";
 import ShopPage from "./app/ShopPage.tsx";
 import ProductPage from "./app/ProductPage.tsx";
+import LoadingDemo from "./app/LoadingDemo.tsx";
+import TestImport from "./app/TestImport.tsx";
 import { CartProvider } from "./app/CartContext.tsx";
 import "./styles/index.css";
 
@@ -20,6 +22,8 @@ function App() {
           <Route path="/about" element={<AboutPage />} />
           <Route path="/shop" element={<ShopPage />} />
           <Route path="/shop/:id" element={<ProductPage />} />
+          <Route path="/loading-demo" element={<LoadingDemo />} />
+          <Route path="/test" element={<TestImport />} />
         </Routes>
       </BrowserRouter>
     </CartProvider>
