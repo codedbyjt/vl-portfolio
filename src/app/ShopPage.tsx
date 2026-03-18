@@ -60,16 +60,13 @@ export default function ShopPage() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-white relative font-sans">
+    <div className="min-h-screen w-full bg-black relative font-sans">
       
-      {/* Background Noise/Texture Overlay */}
-      <div className="fixed inset-0 pointer-events-none opacity-[0.03] z-[5] bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
-
       {/* Header */}
       <motion.header 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="fixed top-0 left-0 right-0 px-3 pt-2 pb-1 md:px-6 md:pt-3 md:pb-2 lg:pt-4 lg:pb-2 z-40 bg-white"
+        className="fixed top-0 left-0 right-0 px-3 pt-2 pb-1 md:px-6 md:pt-3 md:pb-2 lg:pt-4 lg:pb-2 z-40 bg-black border-b border-white/10"
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex-1">
@@ -140,7 +137,7 @@ export default function ShopPage() {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed top-0 right-0 h-full w-full md:w-96 bg-white border-l-4 border-[#00ff00] z-50 shadow-[-10px_0_50px_rgba(0,255,0,0.2)]"
+              className="fixed top-0 right-0 h-full w-full md:w-96 bg-black border-l-4 border-[#00ff00] z-50 shadow-[-10px_0_50px_rgba(0,255,0,0.2)]"
             >
               <div className="p-8 h-full flex flex-col">
                 {/* Header and Close Button */}
@@ -310,7 +307,7 @@ export default function ShopPage() {
                     </a>
                   </div>
 
-                  <p className="font-mono text-xs text-gray-400 mt-2">
+                  <p className="font-mono text-xs text-[#00ff00]/50 mt-2">
                     hello@viclentaigne.com
                   </p>
                 </motion.div>
@@ -339,7 +336,7 @@ export default function ShopPage() {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed top-0 right-0 h-full w-full md:w-96 bg-white border-l-4 border-[#00ff00] z-50 shadow-[-10px_0_50px_rgba(0,255,0,0.2)]"
+              className="fixed top-0 right-0 h-full w-full md:w-96 bg-black border-l-4 border-[#00ff00] z-50 shadow-[-10px_0_50px_rgba(0,255,0,0.2)]"
             >
               <div className="p-8 h-full flex flex-col">
                 {/* Header and Close Button */}
@@ -365,7 +362,7 @@ export default function ShopPage() {
                 <div className="flex-1 overflow-y-auto">
                   {cart.length === 0 ? (
                     <div className="text-center py-12">
-                      <p className="text-xl font-mono text-gray-400 uppercase tracking-wider">
+                      <p className="text-xl font-mono text-white/30 uppercase tracking-wider">
                         Your cart is empty
                       </p>
                     </div>
@@ -389,7 +386,7 @@ export default function ShopPage() {
                               <h3 className="font-black text-sm uppercase tracking-tight text-[#00ff00]">
                                 {item.title}
                               </h3>
-                              <p className="font-mono text-sm mt-1">{item.price}</p>
+                              <p className="font-mono text-sm mt-1 text-white/60">{item.price}</p>
                               
                               <div className="flex items-center gap-3 mt-2">
                                 <button
@@ -429,7 +426,7 @@ export default function ShopPage() {
                     className="border-t-2 border-[#00ff00] pt-6 mt-6"
                   >
                     <div className="flex justify-between items-center mb-4">
-                      <span className="font-black uppercase text-lg tracking-tight">Total:</span>
+                      <span className="font-black uppercase text-lg tracking-tight text-white">Total:</span>
                       <span className="font-black text-2xl text-[#00ff00]">{totalPrice}</span>
                     </div>
                     
@@ -447,7 +444,7 @@ export default function ShopPage() {
                       Checkout
                     </button>
                     
-                    <p className="font-mono text-xs text-center text-gray-400 mt-4">
+                    <p className="font-mono text-xs text-center text-white/30 mt-4">
                       Powered by Stripe Secure Checkout
                     </p>
                   </motion.div>
@@ -469,7 +466,7 @@ export default function ShopPage() {
             transition={{ delay: 0.2 }}
             className="mb-12"
           >
-            <p className="font-mono text-xs md:text-sm uppercase tracking-widest text-gray-600 mb-8">
+            <p className="font-mono text-xs md:text-sm uppercase tracking-widest text-white/40 mb-8">
               Limited Edition Prints & Zines
             </p>
           </motion.div>
@@ -487,7 +484,7 @@ export default function ShopPage() {
                   onClick={() => handleProductClick(item.id)}
                 >
                   {/* Product Image */}
-                  <div className="relative overflow-hidden bg-white flex items-center justify-center mb-4 h-[400px] md:h-[500px]">
+                  <div className="relative overflow-hidden bg-black/40 flex items-center justify-center mb-4 h-[400px] md:h-[500px]">
                     <ImageWithFallback 
                       src={item.image}
                       alt={item.title}
@@ -497,9 +494,9 @@ export default function ShopPage() {
 
                   {/* Product Details */}
                   <div className="space-y-2 mb-4">
-                    <div className="border-b-2 border-black pb-2 flex justify-between items-end">
+                    <div className="border-b-2 border-white/20 pb-2 flex justify-between items-end">
                       <div>
-                        <h3 className="text-xl md:text-2xl font-black uppercase tracking-tight mb-1 group-hover:text-[#00ff00] transition-colors">
+                        <h3 className="text-xl md:text-2xl font-black uppercase tracking-tight mb-1 text-white group-hover:text-[#00ff00] transition-colors">
                           {item.title}
                         </h3>
                         <p className="text-lg md:text-xl font-black text-[#00ff00]">
@@ -510,28 +507,23 @@ export default function ShopPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            addToCart({
-                              id: item.id,
-                              title: item.title,
-                              price: item.price,
-                              image: item.image,
-                            });
+                            addToCart({ id: item.id, title: item.title, price: item.price, image: item.image });
                           }}
-                          className="text-xs font-mono border-2 border-black bg-white px-3 py-1 uppercase font-bold hover:bg-black hover:text-[#00ff00] transition-all"
+                          className="text-xs font-mono border-2 border-white/30 bg-transparent text-white px-3 py-1 uppercase font-bold hover:border-[#00ff00] hover:bg-[#00ff00] hover:text-black transition-all"
                         >
                           BUY
                         </button>
-                        <span className="text-xs font-mono border-2 border-black bg-[#00ff00] px-3 py-1 uppercase font-bold hover:translate-y-[-2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all">VIEW</span>
+                        <span className="text-xs font-mono border-2 border-[#00ff00] bg-[#00ff00] text-black px-3 py-1 uppercase font-bold hover:translate-y-[-2px] hover:shadow-[2px_2px_0px_0px_rgba(0,255,0,0.4)] transition-all">VIEW</span>
                       </div>
                     </div>
 
-                    <p className="font-mono text-[10px] uppercase tracking-wider leading-relaxed text-gray-700">
+                    <p className="font-mono text-[10px] uppercase tracking-wider leading-relaxed text-white/40">
                       {item.description}
                     </p>
 
                     <div className="flex items-center gap-2 pt-1">
                       <div className="w-2 h-2 bg-[#00ff00] animate-pulse"></div>
-                      <span className="font-mono text-[10px] uppercase tracking-widest text-gray-500">
+                      <span className="font-mono text-[10px] uppercase tracking-widest text-white/30">
                         {item.stock}
                       </span>
                     </div>
@@ -542,8 +534,8 @@ export default function ShopPage() {
           </ResponsiveMasonry>
 
           {/* Shop Footer */}
-          <footer className="mt-16 md:mt-24 pt-8 border-t-2 border-black text-center">
-            <p className="font-mono text-[10px] uppercase tracking-widest text-gray-400">
+          <footer className="mt-16 md:mt-24 pt-8 border-t-2 border-white/10 text-center">
+            <p className="font-mono text-[10px] uppercase tracking-widest text-white/30">
               Powered by Stripe Secure Checkout
             </p>
           </footer>
@@ -551,8 +543,8 @@ export default function ShopPage() {
       </div>
 
       {/* Footer */}
-      <footer className="border-t border-gray-300 py-4 px-4 md:px-8 bg-white">
-        <div className="max-w-7xl mx-auto flex justify-between items-center text-[8px] font-mono uppercase tracking-wider text-black">
+      <footer className="border-t border-white/10 py-4 px-4 md:px-8 bg-black">
+        <div className="max-w-7xl mx-auto flex justify-between items-center text-[8px] font-mono uppercase tracking-wider text-white/30">
           <span>©1996 VIC LENTAIGNE</span>
           <span>ACID INK: #RF2238</span>
         </div>
