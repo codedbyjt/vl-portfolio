@@ -12,16 +12,13 @@ export default function AboutPage() {
   }, []);
 
   return (
-    <div className="min-h-screen w-full bg-white relative overflow-y-auto font-sans">
+    <div className="min-h-screen w-full bg-black relative overflow-y-auto font-sans">
       
-      {/* Background Noise/Texture Overlay */}
-      <div className="fixed inset-0 pointer-events-none opacity-[0.03] z-50 bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
-
       {/* Header */}
       <motion.header 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="fixed top-0 left-0 right-0 px-3 pt-2 pb-1 md:px-6 md:pt-3 md:pb-2 lg:pt-4 lg:pb-2 z-40 bg-white"
+        className="fixed top-0 left-0 right-0 px-3 pt-2 pb-1 md:px-6 md:pt-3 md:pb-2 lg:pt-4 lg:pb-2 z-40 bg-black border-b border-white/10"
       >
         <div className="max-w-4xl mx-auto flex items-center justify-end gap-4 md:gap-8">
           <div className="flex-1 flex justify-end">
@@ -77,7 +74,7 @@ export default function AboutPage() {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed top-0 right-0 h-full w-full md:w-96 bg-white border-l-4 border-[#00ff00] z-50 shadow-[-10px_0_50px_rgba(0,255,0,0.2)]"
+              className="fixed top-0 right-0 h-full w-full md:w-96 bg-black border-l-4 border-[#00ff00] z-50 shadow-[-10px_0_50px_rgba(0,255,0,0.2)]"
             >
               <div className="p-8 h-full flex flex-col">
                 {/* Header and Close Button */}
@@ -247,14 +244,14 @@ export default function AboutPage() {
                     </a>
                   </div>
 
-                  <p className="font-mono text-xs text-gray-400 mt-2">
+                  <p className="font-mono text-xs text-[#00ff00]/50 mt-2">
                     hello@viclentaigne.com
                   </p>
                 </motion.div>
 
                 {/* Footer */}
-                <div className="pt-8 border-t border-gray-200">
-                  <p className="font-mono text-xs uppercase tracking-wider text-gray-400">
+                <div className="pt-8 border-t border-white/10">
+                  <p className="font-mono text-xs uppercase tracking-wider text-white/30">
                     © 2026 Vic Lentaigne
                   </p>
                 </div>
@@ -282,10 +279,10 @@ export default function AboutPage() {
               VIC LENTAIGNE
             </h2>
             <div className="h-2 w-32 bg-[#00ff00] mb-8"></div>
-            <p className="text-xl md:text-2xl font-bold uppercase tracking-tight mb-4">
+            <p className="text-xl md:text-2xl font-bold uppercase tracking-tight mb-4 text-white">
               PHOTOGRAPHER & VISUAL DIRECTOR
             </p>
-            <p className="text-base md:text-lg text-gray-600 leading-relaxed max-w-2xl">
+            <p className="text-base md:text-lg text-white/50 leading-relaxed max-w-2xl">
               Based in London, specializing in editorial, commercial, and personal visual storytelling 
               that blends raw authenticity with cinematic precision.
             </p>
@@ -299,28 +296,28 @@ export default function AboutPage() {
             className="mb-16 grid md:grid-cols-2 gap-8"
           >
             <div>
-              <h3 className="text-2xl font-black uppercase mb-4 border-b-2 border-black pb-2">
+              <h3 className="text-2xl font-black uppercase mb-4 border-b-2 border-white/20 pb-2 text-white">
                 Background
               </h3>
-              <p className="text-gray-700 leading-relaxed mb-4">
+              <p className="text-white/50 leading-relaxed mb-4">
                 With over a decade of experience capturing stories through the lens, I've worked 
                 with brands, publications, and artists to create images that resonate beyond the frame.
               </p>
-              <p className="text-gray-700 leading-relaxed">
+              <p className="text-white/50 leading-relaxed">
                 My approach combines technical precision with spontaneous moments, resulting in 
                 work that feels both intentional and alive.
               </p>
             </div>
 
             <div>
-              <h3 className="text-2xl font-black uppercase mb-4 border-b-2 border-black pb-2">
+              <h3 className="text-2xl font-black uppercase mb-4 border-b-2 border-white/20 pb-2 text-white">
                 Approach
               </h3>
-              <p className="text-gray-700 leading-relaxed mb-4">
+              <p className="text-white/50 leading-relaxed mb-4">
                 I believe in collaboration over direction. Every project is a conversation between 
                 subject, environment, and vision.
               </p>
-              <p className="text-gray-700 leading-relaxed">
+              <p className="text-white/50 leading-relaxed">
                 Whether it's editorial portraiture or commercial campaigns, the goal is always 
                 the same: create something honest, striking, and unforgettable.
               </p>
@@ -334,34 +331,18 @@ export default function AboutPage() {
             transition={{ delay: 0.4 }}
             className="mb-16"
           >
-            <h3 className="text-3xl font-black uppercase mb-6 border-b-4 border-[#00ff00] pb-3 inline-block">
+            <h3 className="text-3xl font-black uppercase mb-6 border-b-4 border-[#00ff00] pb-3 inline-block text-white">
               Services
             </h3>
             <div className="grid md:grid-cols-3 gap-6">
               {[
-                {
-                  title: "Editorial Photography",
-                  desc: "Magazine features, artist portraits, and visual storytelling for print and digital publications."
-                },
-                {
-                  title: "Commercial Work",
-                  desc: "Brand campaigns, product photography, and creative direction for businesses and agencies."
-                },
-                {
-                  title: "Film & Direction",
-                  desc: "Short films, documentaries, music videos, and cinematography for narrative projects."
-                }
+                { title: "Editorial Photography", desc: "Magazine features, artist portraits, and visual storytelling for print and digital publications." },
+                { title: "Commercial Work", desc: "Brand campaigns, product photography, and creative direction for businesses and agencies." },
+                { title: "Film & Direction", desc: "Short films, documentaries, music videos, and cinematography for narrative projects." }
               ].map((service, i) => (
-                <div 
-                  key={i}
-                  className="border-2 border-black p-6 hover:bg-[#00ff00] hover:translate-y-[-4px] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all duration-300 group"
-                >
-                  <h4 className="font-black uppercase text-lg mb-3 group-hover:text-black">
-                    {service.title}
-                  </h4>
-                  <p className="text-sm text-gray-600 group-hover:text-black">
-                    {service.desc}
-                  </p>
+                <div key={i} className="border-2 border-white/20 p-6 hover:bg-[#00ff00] hover:border-[#00ff00] hover:translate-y-[-4px] hover:shadow-[4px_4px_0px_0px_rgba(0,255,0,0.3)] transition-all duration-300 group">
+                  <h4 className="font-black uppercase text-lg mb-3 text-white group-hover:text-black">{service.title}</h4>
+                  <p className="text-sm text-white/50 group-hover:text-black">{service.desc}</p>
                 </div>
               ))}
             </div>
@@ -374,18 +355,12 @@ export default function AboutPage() {
             transition={{ delay: 0.5 }}
             className="mb-16"
           >
-            <h3 className="text-3xl font-black uppercase mb-6 border-b-4 border-black pb-3 inline-block">
+            <h3 className="text-3xl font-black uppercase mb-6 border-b-4 border-white/20 pb-3 inline-block text-white">
               Selected Clients
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[
-                "VOGUE", "I-D MAGAZINE", "DAZED", "NIKE",
-                "ADIDAS", "SPOTIFY", "APPLE", "HYPEBEAST"
-              ].map((client, i) => (
-                <div 
-                  key={i}
-                  className="border-2 border-black p-4 text-center font-black uppercase text-xs md:text-sm hover:bg-black hover:text-[#00ff00] transition-colors duration-300"
-                >
+              {["VOGUE", "I-D MAGAZINE", "DAZED", "NIKE", "ADIDAS", "SPOTIFY", "APPLE", "HYPEBEAST"].map((client, i) => (
+                <div key={i} className="border-2 border-white/20 p-4 text-center font-black uppercase text-xs md:text-sm text-white/60 hover:bg-[#00ff00] hover:border-[#00ff00] hover:text-black transition-colors duration-300">
                   {client}
                 </div>
               ))}
@@ -402,7 +377,7 @@ export default function AboutPage() {
             <h3 className="text-3xl md:text-4xl font-black uppercase mb-4">
               LET'S WORK TOGETHER
             </h3>
-            <p className="text-gray-300 mb-6 max-w-xl">
+            <p className="text-white/50 mb-6 max-w-xl">
               Open to collaborations and creative projects worldwide.
             </p>
             <div className="flex flex-col md:flex-row gap-4">
@@ -425,16 +400,12 @@ export default function AboutPage() {
       </div>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-300 py-6 px-4">
+      <footer className="bg-black border-t border-white/10 py-6 px-4">
         <div className="max-w-4xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-          <span className="text-[8px] md:text-[10px] font-mono uppercase tracking-wider text-black">
-            ©1996 VIC LENTAIGNE
-          </span>
+          <span className="text-[8px] md:text-[10px] font-mono uppercase tracking-wider text-white/30">©1996 VIC LENTAIGNE</span>
           <div className="flex gap-6 text-[8px] md:text-[10px] font-mono uppercase tracking-wider">
-            <a href="mailto:hello@viclentaigne.com" className="hover:text-[#00ff00] transition-colors">
-              hello@viclentaigne.com
-            </a>
-            <span className="text-gray-400">ACID INK: #RF2238</span>
+            <a href="mailto:hello@viclentaigne.com" className="text-white/30 hover:text-[#00ff00] transition-colors">hello@viclentaigne.com</a>
+            <span className="text-white/20">ACID INK: #RF2238</span>
           </div>
         </div>
       </footer>

@@ -7,7 +7,7 @@ import { ImageWithFallback } from './components/figma/ImageWithFallback';
 const FILM_ITEMS = [
   {
     id: 1,
-    src: "/shorts-placeholder.jpg",
+    youtubeId: "iHMOYP-L4jc",
     title: "SHORT FILM",
     role: "DIRECTOR",
     year: "2024",
@@ -47,19 +47,14 @@ export default function FilmPage() {
   const filteredFilms = FILM_ITEMS.filter(item => item.category === filmCategory);
 
   return (
-    <div className="h-screen w-full bg-white flex flex-col font-sans">
+    <div className="h-screen w-full bg-black flex flex-col font-sans">
       
-      {/* Background Noise/Texture Overlay */}
-      <div className="fixed inset-0 pointer-events-none opacity-[0.03] z-[5] bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
-
       {/* Main Header */}
       <motion.header 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="fixed top-0 left-0 right-0 px-3 pt-2 pb-1 md:px-6 md:pt-3 md:pb-2 lg:pt-4 lg:pb-2 z-50"
-        style={{ backgroundColor: 'white' }}
+        className="fixed top-0 left-0 right-0 px-3 pt-2 pb-1 md:px-6 md:pt-3 md:pb-2 lg:pt-4 lg:pb-2 z-50 bg-black"
       >
-        <div className="absolute inset-0 bg-white -z-10"></div>
         <div className="max-w-7xl mx-auto flex items-center justify-between relative z-10">
           <div className="flex-1">
             <button
@@ -113,7 +108,7 @@ export default function FilmPage() {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed top-0 right-0 h-full w-full md:w-96 bg-white border-l-4 border-[#00ff00] z-50 shadow-[-10px_0_50px_rgba(0,255,0,0.2)]"
+              className="fixed top-0 right-0 h-full w-full md:w-96 bg-black border-l-4 border-[#00ff00] z-50 shadow-[-10px_0_50px_rgba(0,255,0,0.2)]"
             >
               <div className="p-8 h-full flex flex-col">
                 {/* Header and Close Button */}
@@ -283,7 +278,7 @@ export default function FilmPage() {
                     </a>
                   </div>
 
-                  <p className="font-mono text-xs text-gray-400 mt-2">
+                  <p className="font-mono text-xs text-[#00ff00]/50 mt-2">
                     hello@viclentaigne.com
                   </p>
                 </motion.div>
@@ -298,47 +293,45 @@ export default function FilmPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="fixed top-[70px] md:top-[100px] lg:top-[130px] left-0 right-0 z-40 px-4 md:px-8 py-2"
-        style={{ backgroundColor: 'white' }}
+        className="fixed top-[70px] md:top-[100px] lg:top-[130px] left-0 right-0 z-40 px-4 md:px-8 py-2 bg-black border-b border-white/10"
       >
-        <div className="absolute inset-0 bg-white -z-10"></div>
         <div className="max-w-7xl mx-auto flex flex-wrap items-center gap-3 relative z-10">
           {/* Film & Direction Label */}
-          <div className="px-4 md:px-5 py-2 border-2 border-black bg-[#00ff00] text-black font-semibold uppercase text-xs md:text-sm tracking-tight shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+          <div className="px-4 md:px-5 py-2 border-2 border-[#00ff00] bg-[#00ff00] text-black font-semibold uppercase text-xs md:text-sm tracking-tight shadow-[2px_2px_0px_0px_rgba(0,255,0,0.4)]">
             Film & Direction
           </div>
 
           {/* Divider */}
-          <div className="h-6 w-px bg-gray-300 hidden md:block"></div>
+          <div className="h-6 w-px bg-white/20 hidden md:block"></div>
 
           {/* Sub-categories */}
           <div className="flex gap-2">
             <button
               onClick={() => setFilmCategory('shorts')}
-              className={`px-3 md:px-4 py-1.5 border-2 border-black font-mono font-normal uppercase text-[10px] md:text-xs tracking-tight transition-all ${
+              className={`px-3 md:px-4 py-1.5 border-2 font-mono font-normal uppercase text-[10px] md:text-xs tracking-tight transition-all ${
                 filmCategory === 'shorts'
-                  ? 'bg-black text-[#00ff00]'
-                  : 'bg-white text-black hover:bg-gray-100'
+                  ? 'border-[#00ff00] bg-[#00ff00] text-black'
+                  : 'border-white/30 bg-transparent text-white/60 hover:border-white/60 hover:text-white'
               }`}
             >
               Shorts
             </button>
             <button
               onClick={() => setFilmCategory('docs')}
-              className={`px-3 md:px-4 py-1.5 border-2 border-black font-mono font-normal uppercase text-[10px] md:text-xs tracking-tight transition-all ${
+              className={`px-3 md:px-4 py-1.5 border-2 font-mono font-normal uppercase text-[10px] md:text-xs tracking-tight transition-all ${
                 filmCategory === 'docs'
-                  ? 'bg-black text-[#00ff00]'
-                  : 'bg-white text-black hover:bg-gray-100'
+                  ? 'border-[#00ff00] bg-[#00ff00] text-black'
+                  : 'border-white/30 bg-transparent text-white/60 hover:border-white/60 hover:text-white'
               }`}
             >
               Docs
             </button>
             <button
               onClick={() => setFilmCategory('film')}
-              className={`px-3 md:px-4 py-1.5 border-2 border-black font-mono font-normal uppercase text-[10px] md:text-xs tracking-tight transition-all ${
+              className={`px-3 md:px-4 py-1.5 border-2 font-mono font-normal uppercase text-[10px] md:text-xs tracking-tight transition-all ${
                 filmCategory === 'film'
-                  ? 'bg-black text-[#00ff00]'
-                  : 'bg-white text-black hover:bg-gray-100'
+                  ? 'border-[#00ff00] bg-[#00ff00] text-black'
+                  : 'border-white/30 bg-transparent text-white/60 hover:border-white/60 hover:text-white'
               }`}
             >
               Film
@@ -347,7 +340,7 @@ export default function FilmPage() {
 
           {/* Info Text */}
           <div className="ml-auto hidden lg:block">
-            <p className="font-mono text-[10px] uppercase tracking-widest text-gray-400">
+            <p className="font-mono text-[10px] uppercase tracking-widest text-white/30">
               Reel 2026
             </p>
           </div>
@@ -355,7 +348,7 @@ export default function FilmPage() {
       </motion.div>
 
       {/* Content Area */}
-      <div className="fixed top-[120px] md:top-[145px] lg:top-[175px] bottom-[40px] left-0 right-0 overflow-y-auto bg-white">
+      <div className="fixed top-[120px] md:top-[145px] lg:top-[175px] bottom-[40px] left-0 right-0 overflow-y-auto bg-black">
         <div className="px-4 md:px-8 py-8">
           <div className="max-w-7xl mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
@@ -367,33 +360,43 @@ export default function FilmPage() {
                   className="group cursor-pointer"
                 >
                   <div className="relative aspect-video border-2 border-black bg-black overflow-hidden mb-4">
-                    <ImageWithFallback 
-                      src={item.src}
-                      alt={item.title}
-                      className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500"
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="w-16 h-16 rounded-full border-2 border-white flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                        <Play fill="white" size={24} />
-                      </div>
-                    </div>
-                    
-                    {/* CRT Scanline Overlay */}
-                    <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] z-10 bg-[length:100%_2px,3px_100%]"></div>
+                    {'youtubeId' in item && item.youtubeId ? (
+                      <iframe
+                        src={`https://www.youtube.com/embed/${item.youtubeId}?rel=0&modestbranding=1`}
+                        title={item.title}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                        allowFullScreen
+                        className="absolute inset-0 w-full h-full border-0"
+                      />
+                    ) : (
+                      <>
+                        <ImageWithFallback 
+                          src={(item as any).src}
+                          alt={item.title}
+                          className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="w-16 h-16 rounded-full border-2 border-white flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                            <Play fill="white" size={24} />
+                          </div>
+                        </div>
+                        <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] z-10 bg-[length:100%_2px,3px_100%]"></div>
+                      </>
+                    )}
                   </div>
                   
-                  <div className="flex justify-between items-end border-b-2 border-black pb-2">
+                  <div className="flex justify-between items-end border-b-2 border-white/20 pb-2">
                     <div>
-                      <h3 className="text-xl md:text-2xl font-black uppercase font-mono">{item.title}</h3>
-                      <p className="text-xs font-mono text-gray-600 uppercase tracking-widest">{item.role} // {item.year}</p>
+                      <h3 className="text-xl md:text-2xl font-black uppercase font-mono text-white">{item.title}</h3>
+                      <p className="text-xs font-mono text-white/40 uppercase tracking-widest">{item.role} // {item.year}</p>
                     </div>
-                    <span className="text-xs font-mono border-2 border-black bg-[#00ff00] px-3 py-1 uppercase font-bold hover:translate-y-[-2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all">WATCH</span>
+                    <span className="text-xs font-mono border-2 border-[#00ff00] bg-[#00ff00] text-black px-3 py-1 uppercase font-bold hover:translate-y-[-2px] hover:shadow-[2px_2px_0px_0px_rgba(0,255,0,0.4)] transition-all">WATCH</span>
                   </div>
                 </motion.div>
               ))}
             </div>
 
-            <footer className="mt-16 md:mt-24 pt-8 border-t border-black text-center font-mono text-xs uppercase text-gray-500">
+            <footer className="mt-16 md:mt-24 pt-8 border-t border-white/10 text-center font-mono text-xs uppercase text-white/30">
               End of Reel
             </footer>
           </div>
@@ -401,8 +404,8 @@ export default function FilmPage() {
       </div>
 
       {/* Footer */}
-      <footer className="fixed bottom-0 left-0 right-0 border-t border-gray-300 py-2 px-4 md:px-8 bg-white z-20">
-        <div className="max-w-7xl mx-auto flex justify-between items-center text-[8px] font-mono uppercase tracking-wider text-black">
+      <footer className="fixed bottom-0 left-0 right-0 border-t border-white/10 py-2 px-4 md:px-8 bg-black z-20">
+        <div className="max-w-7xl mx-auto flex justify-between items-center text-[8px] font-mono uppercase tracking-wider text-white/30">
           <span>©1996 VIC LENTAIGNE</span>
           <span>FILM & DIRECTION</span>
         </div>

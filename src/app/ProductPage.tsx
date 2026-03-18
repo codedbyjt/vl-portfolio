@@ -72,16 +72,13 @@ export default function ProductPage() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-white relative font-sans">
+    <div className="min-h-screen w-full bg-black relative font-sans">
       
-      {/* Background Noise/Texture Overlay */}
-      <div className="fixed inset-0 pointer-events-none opacity-[0.03] z-[5] bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
-
       {/* Header */}
       <motion.header 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="fixed top-0 left-0 right-0 px-3 pt-2 pb-1 md:px-6 md:pt-3 md:pb-2 lg:pt-4 lg:pb-2 z-40 bg-white"
+        className="fixed top-0 left-0 right-0 px-3 pt-2 pb-1 md:px-6 md:pt-3 md:pb-2 lg:pt-4 lg:pb-2 z-40 bg-black border-b border-white/10"
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex-1">
@@ -132,7 +129,7 @@ export default function ProductPage() {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed top-0 right-0 h-full w-full md:w-96 bg-white border-l-4 border-[#00ff00] z-50 shadow-[-10px_0_50px_rgba(0,255,0,0.2)]"
+              className="fixed top-0 right-0 h-full w-full md:w-96 bg-black border-l-4 border-[#00ff00] z-50 shadow-[-10px_0_50px_rgba(0,255,0,0.2)]"
             >
               <div className="p-8 h-full flex flex-col">
                 {/* Header and Close Button */}
@@ -158,7 +155,7 @@ export default function ProductPage() {
                 <div className="flex-1 overflow-y-auto">
                   {cart.length === 0 ? (
                     <div className="text-center py-12">
-                      <p className="text-xl font-mono text-gray-400 uppercase tracking-wider">
+                      <p className="text-xl font-mono text-white/30 uppercase tracking-wider">
                         Your cart is empty
                       </p>
                     </div>
@@ -182,7 +179,7 @@ export default function ProductPage() {
                               <h3 className="font-black text-sm uppercase tracking-tight text-[#00ff00]">
                                 {item.title}
                               </h3>
-                              <p className="font-mono text-sm mt-1">{item.price}</p>
+                              <p className="font-mono text-sm mt-1 text-white/60">{item.price}</p>
                               
                               <div className="flex items-center gap-3 mt-2">
                                 <button
@@ -222,7 +219,7 @@ export default function ProductPage() {
                     className="border-t-2 border-[#00ff00] pt-6 mt-6"
                   >
                     <div className="flex justify-between items-center mb-4">
-                      <span className="font-black uppercase text-lg tracking-tight">Total:</span>
+                      <span className="font-black uppercase text-lg tracking-tight text-white">Total:</span>
                       <span className="font-black text-2xl text-[#00ff00]">{totalPrice}</span>
                     </div>
                     
@@ -240,7 +237,7 @@ export default function ProductPage() {
                       Checkout
                     </button>
                     
-                    <p className="font-mono text-xs text-center text-gray-400 mt-4">
+                    <p className="font-mono text-xs text-center text-white/30 mt-4">
                       Powered by Stripe Secure Checkout
                     </p>
                   </motion.div>
@@ -260,7 +257,7 @@ export default function ProductPage() {
       >
         <button
           onClick={() => navigate('/shop')}
-          className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-black font-black uppercase text-xs md:text-sm tracking-tight hover:bg-[#00ff00] transition-all duration-300 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[-2px]"
+          className="flex items-center gap-2 px-4 py-2 bg-black border-2 border-white/30 text-white font-black uppercase text-xs md:text-sm tracking-tight hover:bg-[#00ff00] hover:text-black hover:border-[#00ff00] transition-all duration-300 shadow-[2px_2px_0px_0px_rgba(0,255,0,0.2)] hover:shadow-[4px_4px_0px_0px_rgba(0,255,0,0.3)] hover:translate-y-[-2px]"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Shop</span>
@@ -282,7 +279,7 @@ export default function ProductPage() {
               className="relative"
             >
               <div className="sticky top-[180px] md:top-[220px] lg:top-[260px]">
-                <div className="relative bg-white border-4 border-black overflow-hidden max-w-md mx-auto lg:mx-0">
+                <div className="relative bg-black/40 border-4 border-white/20 overflow-hidden max-w-md mx-auto lg:mx-0">
                   <ImageWithFallback 
                     src={product.image}
                     alt={product.title}
@@ -301,10 +298,8 @@ export default function ProductPage() {
             >
               
               {/* Title Section */}
-              <div className="border-b-4 border-black pb-6">
-                <h1 
-                  className="text-4xl md:text-5xl lg:text-6xl font-black uppercase tracking-tighter mb-4"
-                >
+              <div className="border-b-4 border-white/20 pb-6">
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-black uppercase tracking-tighter mb-4 text-white">
                   {product.title}
                 </h1>
                 <p className="text-3xl md:text-4xl font-black text-[#00ff00]">
@@ -314,15 +309,15 @@ export default function ProductPage() {
 
               {/* Description */}
               <div className="space-y-4">
-                <p className="font-mono text-sm md:text-base uppercase tracking-wider leading-relaxed text-gray-700">
+                <p className="font-mono text-sm md:text-base uppercase tracking-wider leading-relaxed text-white/50">
                   {product.description}
                 </p>
               </div>
 
               {/* Stock Status */}
-              <div className="flex items-center gap-3 py-4 border-y-2 border-black">
+              <div className="flex items-center gap-3 py-4 border-y-2 border-white/20">
                 <div className="w-3 h-3 bg-[#00ff00] animate-pulse"></div>
-                <span className="font-mono text-sm uppercase tracking-widest font-bold">
+                <span className="font-mono text-sm uppercase tracking-widest font-bold text-white">
                   {product.stock}
                 </span>
               </div>
@@ -340,8 +335,8 @@ export default function ProductPage() {
               {/* Additional Info */}
               <div className="space-y-3 pt-6">
                 <div className="flex items-start gap-3">
-                  <div className="w-2 h-2 bg-black mt-2"></div>
-                  <p className="font-mono text-xs uppercase tracking-wider text-gray-600">
+                  <div className="w-2 h-2 bg-[#00ff00] mt-2"></div>
+                  <p className="font-mono text-xs uppercase tracking-wider text-white/30">
                     Secure checkout powered by Stripe
                   </p>
                 </div>
@@ -355,8 +350,8 @@ export default function ProductPage() {
       </div>
 
       {/* Footer */}
-      <footer className="border-t border-gray-300 py-4 px-4 md:px-8 bg-white">
-        <div className="max-w-7xl mx-auto flex justify-between items-center text-[8px] font-mono uppercase tracking-wider text-black">
+      <footer className="border-t border-white/10 py-4 px-4 md:px-8 bg-black">
+        <div className="max-w-7xl mx-auto flex justify-between items-center text-[8px] font-mono uppercase tracking-wider text-white/30">
           <span>©1996 VIC LENTAIGNE</span>
           <span>ACID INK: #RF2238</span>
         </div>

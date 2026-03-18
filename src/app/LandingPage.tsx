@@ -2,22 +2,23 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Instagram, Facebook, Linkedin } from 'lucide-react';
+import SlideshowBurn from './backgrounds/SlideshowBurn';
 
 export default function LandingPage() {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <div className="h-screen w-full bg-white flex flex-col font-sans overflow-hidden">
+    <div className="h-screen w-full flex flex-col font-sans overflow-hidden relative bg-black">
       
-      {/* Background Noise/Texture Overlay */}
-      <div className="fixed inset-0 pointer-events-none opacity-[0.03] z-[5] bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
+      {/* Slideshow background */}
+      <SlideshowBurn />
 
       {/* Main Header */}
       <motion.header 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="fixed top-0 left-0 right-0 px-4 pt-4 pb-3 md:px-8 md:pt-6 md:pb-4 lg:pt-8 lg:pb-6 z-50 bg-white"
+        className="fixed top-0 left-0 right-0 px-4 pt-4 pb-3 md:px-8 md:pt-6 md:pb-4 lg:pt-8 lg:pb-6 z-50"
       >
         <div className="max-w-7xl mx-auto flex items-center justify-end">
           {/* Fancy Menu Button */}
@@ -61,7 +62,7 @@ export default function LandingPage() {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed top-0 right-0 h-full w-full md:w-96 bg-white border-l-4 border-[#00ff00] z-50 shadow-[-10px_0_50px_rgba(0,255,0,0.2)]"
+              className="fixed top-0 right-0 h-full w-full md:w-96 bg-black border-l-4 border-[#00ff00] z-50 shadow-[-10px_0_50px_rgba(0,255,0,0.2)]"
             >
               <div className="p-8 h-full flex flex-col">
                 {/* Header and Close Button */}
@@ -193,12 +194,26 @@ export default function LandingPage() {
                     <span className="ml-2 text-xs font-mono text-[#00ff00]/40 group-hover:text-[#00ff00]/70 transition-colors">
                       ↗ 9 concepts
                     </span>
-                    <motion.div 
-                      className="h-0.5 bg-[#00ff00]/50 mt-1"
-                      initial={{ width: 0 }}
-                      whileHover={{ width: '100%' }}
-                      transition={{ duration: 0.3 }}
-                    />
+                    <motion.div className="h-0.5 bg-[#00ff00]/50 mt-1" initial={{ width: 0 }} whileHover={{ width: '100%' }} transition={{ duration: 0.3 }} />
+                  </motion.button>
+
+                  <motion.button
+                    initial={{ x: 50, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: 0.35 }}
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      navigate('/backgrounds-demo');
+                    }}
+                    className="group relative text-left"
+                  >
+                    <span className="text-xl md:text-2xl font-bold uppercase tracking-tighter text-[#00ff00]/50 group-hover:text-[#00ff00] transition-all duration-300">
+                      Backgrounds
+                    </span>
+                    <span className="ml-2 text-xs font-mono text-[#00ff00]/40 group-hover:text-[#00ff00]/70 transition-colors">
+                      ↗ 6 concepts
+                    </span>
+                    <motion.div className="h-0.5 bg-[#00ff00]/50 mt-1" initial={{ width: 0 }} whileHover={{ width: '100%' }} transition={{ duration: 0.3 }} />
                   </motion.button>
                 </nav>
 
@@ -239,7 +254,7 @@ export default function LandingPage() {
                     </a>
                   </div>
 
-                  <p className="font-mono text-xs text-gray-400 mt-2">
+                  <p className="font-mono text-xs text-[#00ff00]/50 mt-2">
                     hello@viclentaigne.com
                   </p>
                 </motion.div>
@@ -250,7 +265,7 @@ export default function LandingPage() {
       </AnimatePresence>
 
       {/* Hero Section */}
-      <div className="flex-1 flex items-center justify-center px-4 md:px-8">
+      <div className="relative z-10 flex-1 flex items-center justify-center px-4 md:px-8">
         <div className="max-w-7xl w-full">
           
           {/* Main Content */}
@@ -268,8 +283,8 @@ export default function LandingPage() {
             >
               VIC LENTAIGNE
             </h2>
-            <p className="font-mono text-xs md:text-sm lg:text-base uppercase tracking-widest text-gray-600 mb-2">
-              Photography • Film • Direction
+            <p className="font-mono text-xs md:text-sm lg:text-base uppercase tracking-widest text-white/60 mb-2">
+              Photographer • Director
             </p>
           </motion.div>
 
@@ -283,20 +298,15 @@ export default function LandingPage() {
             {/* Photography Card */}
             <motion.button
               onClick={() => navigate('/photography')}
-              className="group relative p-6 md:p-12 border-4 border-black bg-white hover:bg-[#00ff00] transition-all duration-300 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[-4px]"
+              className="group relative p-6 md:p-12 border-4 border-white/30 bg-black/40 backdrop-blur-sm hover:bg-[#00ff00] hover:border-[#00ff00] transition-all duration-300 shadow-[4px_4px_0px_0px_rgba(0,255,0,0.3)] hover:shadow-[8px_8px_0px_0px_rgba(0,255,0,0.5)] hover:translate-y-[-4px]"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
               <div className="text-center">
-                <h3 className="text-2xl md:text-4xl lg:text-5xl font-black uppercase tracking-tighter mb-2 md:mb-4 leading-tight"
-                  style={{ 
-                    WebkitTextStroke: "2px #000",
-                    color: "transparent"
-                  }}
-                >
+                <h3 className="text-2xl md:text-4xl lg:text-5xl font-black uppercase tracking-tighter mb-2 md:mb-4 leading-tight text-white group-hover:text-black transition-colors">
                   Photography
                 </h3>
-                <p className="font-mono text-[10px] md:text-xs uppercase tracking-widest text-gray-600 group-hover:text-black transition-colors">
+                <p className="font-mono text-[10px] md:text-xs uppercase tracking-widest text-white/50 group-hover:text-black/70 transition-colors">
                   Editorial • Personal • Commercial
                 </p>
               </div>
@@ -308,20 +318,15 @@ export default function LandingPage() {
             {/* Film & Direction Card */}
             <motion.button
               onClick={() => navigate('/film')}
-              className="group relative p-6 md:p-12 border-4 border-black bg-white hover:bg-[#00ff00] transition-all duration-300 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[-4px]"
+              className="group relative p-6 md:p-12 border-4 border-white/30 bg-black/40 backdrop-blur-sm hover:bg-[#00ff00] hover:border-[#00ff00] transition-all duration-300 shadow-[4px_4px_0px_0px_rgba(0,255,0,0.3)] hover:shadow-[8px_8px_0px_0px_rgba(0,255,0,0.5)] hover:translate-y-[-4px]"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
               <div className="text-center">
-                <h3 className="text-2xl md:text-4xl lg:text-5xl font-black uppercase tracking-tighter mb-2 md:mb-4 leading-tight"
-                  style={{ 
-                    WebkitTextStroke: "2px #000",
-                    color: "transparent"
-                  }}
-                >
+                <h3 className="text-2xl md:text-4xl lg:text-5xl font-black uppercase tracking-tighter mb-2 md:mb-4 leading-tight text-white group-hover:text-black transition-colors">
                   Film & Direction
                 </h3>
-                <p className="font-mono text-[10px] md:text-xs uppercase tracking-widest text-gray-600 group-hover:text-black transition-colors">
+                <p className="font-mono text-[10px] md:text-xs uppercase tracking-widest text-white/50 group-hover:text-black/70 transition-colors">
                   Shorts • Docs • Film
                 </p>
               </div>
@@ -335,8 +340,8 @@ export default function LandingPage() {
       </div>
 
       {/* Footer */}
-      <footer className="border-t border-gray-300 py-4 px-4 md:px-8 bg-white">
-        <div className="max-w-7xl mx-auto flex justify-between items-center text-[8px] font-mono uppercase tracking-wider text-black">
+      <footer className="relative z-10 border-t border-white/10 py-4 px-4 md:px-8 bg-black/30 backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto flex justify-between items-center text-[8px] font-mono uppercase tracking-wider text-white/40">
           <span>©1996 VIC LENTAIGNE</span>
           <span>ACID INK: #RF2238</span>
         </div>
