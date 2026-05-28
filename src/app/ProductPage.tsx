@@ -1,362 +1,85 @@
-import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ShoppingCart } from 'lucide-react';
-import { ImageWithFallback } from './components/figma/ImageWithFallback';
-import { useCart } from './CartContext';
+import { ArrowLeft } from 'lucide-react';
+
+const publicAsset = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\//, '')}`;
 
 const SHOP_ITEMS = [
   {
     id: 1,
-    title: "17TH BOYS ZINE",
+    title: "17th Boys Zine",
     price: "£18",
-    description: "A LIMITED EDITION COLLECTABLE ZINE, IN A NUMBERED RUN OF 200 COPIES. RISOGRAPH PRINTED BY PAGEMASTERS IN LONDON.",
-    image: "/17thboys.webp",
+    description: "A limited edition collectable zine, in a numbered run of 200 copies. Risograph printed by Pagemasters in London.",
+    image: publicAsset("/17thboys.webp"),
+    stock: "Limited Edition",
     checkoutUrl: "https://checkout.stripe.com/c/pay/cs_live_a1JLP1AbPhUM6K8FmoFVmC2wVkAi5wHpC0HXOaYlCCunWDIeOUV9NlxoHL#fidkdWxOYHwnPyd1blppbHNgWjFSaG5QdGh1fDA9PEZwSl0yf0ptRGtQNicpJ3Zxd2x1YERmZmpwa3EnPydkZmZxWjRXQmhGXzU0TkBDQkNqcUonKSdobGF2Jz9%2BJ2JwbGEnPydnMz1nNmAzZihgYGEzKDEwNzQoZz09NCgyMjxgYTIxYGMwZjdnMTw1MjQnKSdocGxhJz8nMTJkNDI1NTAoMjwxYygxNzYwKDw1Z2EoMT00Zj0yZ2ZkYWQyMzM3NTVkJykndmxhJz8nPWFjYWM1MT0oMWY1NigxNTNhKDxkYTQoMjwxZzAxZjM2PTdhY2c1ZDcxJ3gpJ2dgcWR2Jz9eWCknaWR8anBxUXx1YCc%2FJ3Zsa2JpYFpscWBoJyknd2BjYHd3YHdKd2xibGsnPydtcXF1dj8qKnJycitzbGZpYGtxZGxia2ArZmpoJ3gl",
-    stock: "LIMITED EDITION"
   },
   {
     id: 2,
-    title: "WRESTLE A3 POSTER",
+    title: "Wrestle A3 Poster",
     price: "£50",
-    description: "A VERY LIMITED EDITION RISOGRAPH POSTER. EDITION OF 25. PRINTED ON BLACK 170GSM PAPER WITH SILVER INK.",
-    image: "/wrestlea3poster.webp",
-    checkoutUrl: "https://checkout.stripe.com/", // Add your Stripe checkout URL here
-    stock: "EDITION OF 25"
+    description: "A very limited edition risograph poster. Edition of 25. Printed on black 170gsm paper with silver ink.",
+    image: publicAsset("/wrestlea3poster.webp"),
+    stock: "Edition of 25",
+    checkoutUrl: "https://checkout.stripe.com/",
   },
   {
     id: 3,
-    title: "TORSO A3 POSTER",
+    title: "Torso A3 Poster",
     price: "£35",
-    description: "A LIMITED EDITION RISOGRAPH POSTER. IN A RUN OF 50 EDITIONS. PRINTED ON 170GSM PAPER.",
-    image: "/torsoa3poster.webp",
+    description: "A limited edition risograph poster in a run of 50 editions. Printed on 170gsm paper.",
+    image: publicAsset("/torsoa3poster.webp"),
+    stock: "Edition of 50",
     checkoutUrl: "https://checkout.stripe.com/c/pay/cs_live_a1tipYfIL6Qh9Az9Uc17g1B7drBSaZxyLQ64ASUQ4bQX2felUFnFdxE1zJ#fidkdWxOYHwnPyd1blppbHNgWjFSaG5QdGh1fDA9PEZwSl0yf0ptRGtQNicpJ3Zxd2x1YERmZmpwa3EnPydkZmZxWjRXQmhGXzU0TkBDQkNqcUonKSdobGF2Jz9%2BJ2JwbGEnPydhMGFnYzZhNyhnMmBgKDFmN2YoZGMzZihkMmA3NWRgYzI8MGNkNWRkYzcnKSdocGxhJz8nMTJkNDI1NTAoMjwxYygxNzYwKDw1Z2EoMT00Zj0yZ2ZkYWQyMzM3NTVkJykndmxhJz8nPWFjYWM1MT0oMWY1NigxNTNhKDxkYTQoMjwxZzAxZjM2PTdhY2c1ZDcxJ3gpJ2dgcWR2Jz9eWCknaWR8anBxUXx1YCc%2FJ3Zsa2JpYFpscWBoJyknd2BjYHd3YHdKd2xibGsnPydtcXF1dj8qKnJycitzbGZpYGtxZGxia2ArZmpoJ3gl",
-    stock: "EDITION OF 50"
-  }
+  },
 ];
 
 export default function ProductPage() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isCartOpen, setIsCartOpen] = useState(false);
-  const { addToCart, getTotalItems, cart, removeFromCart, updateQuantity, getTotalPrice } = useCart();
-  const totalItems = getTotalItems();
-  const totalPrice = getTotalPrice();
-
-  const product = SHOP_ITEMS.find(item => item.id === Number(id));
-
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
+  const product = SHOP_ITEMS.find((item) => item.id === Number(id));
 
   if (!product) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p>Product not found</p>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <p className="text-gray-400 text-sm">Product not found.</p>
       </div>
     );
   }
 
-  const handleBuyNow = () => {
-    if (product) {
-      addToCart({
-        id: product.id,
-        title: product.title,
-        price: product.price,
-        image: product.image,
-      });
-    }
-    // Optionally redirect to checkout or show a success message
-    // window.location.href = product.checkoutUrl;
-  };
-
   return (
-    <div className="min-h-screen w-full bg-black relative font-sans">
-      
-      {/* Header */}
-      <motion.header 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="fixed top-0 left-0 right-0 px-3 pt-2 pb-1 md:px-6 md:pt-3 md:pb-2 lg:pt-4 lg:pb-2 z-40 bg-black border-b border-white/10"
-      >
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex-1">
-            <button 
-              onClick={() => navigate('/')}
-              className="text-2xl md:text-4xl lg:text-5xl font-black uppercase tracking-tighter text-transparent hover:text-[#00ff00] transition-colors cursor-pointer" 
-              style={{ WebkitTextStroke: "2px #00ff00" }}
-            >
-              VIC LENTAIGNE
-            </button>
-            <div className="w-full h-0.5 bg-[#00ff00] mt-0.5"></div>
-          </div>
-
-          {/* Cart Icon */}
-          <motion.button
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            onClick={() => setIsCartOpen(!isCartOpen)}
-            className="relative mx-4 md:mx-6"
-            aria-label="Shopping cart"
-          >
-            <ShoppingCart className="w-6 h-6 md:w-7 md:h-7 text-[#00ff00]" strokeWidth={1.5} />
-            {totalItems > 0 && (
-              <span className="absolute -top-2 -right-2 bg-black text-[#00ff00] rounded-full w-6 h-6 flex items-center justify-center text-xs font-black border-2 border-[#00ff00]">
-                {totalItems}
-              </span>
-            )}
-          </motion.button>
-        </div>
-      </motion.header>
-
-      {/* Cart Summary Panel */}
-      <AnimatePresence>
-        {isCartOpen && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsCartOpen(false)}
-              className="fixed inset-0 bg-black/50 z-50 backdrop-blur-sm"
-            />
-            
-            {/* Cart Panel */}
-            <motion.div
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed top-0 right-0 h-full w-full md:w-96 bg-black border-l-4 border-[#00ff00] z-50 shadow-[-10px_0_50px_rgba(0,255,0,0.2)]"
-            >
-              <div className="p-8 h-full flex flex-col">
-                {/* Header and Close Button */}
-                <div className="flex items-start justify-between mb-4">
-                  <h2 
-                    className="text-3xl md:text-4xl font-black uppercase tracking-tighter text-transparent" 
-                    style={{ WebkitTextStroke: "2px #00ff00" }}
-                  >
-                    Your Cart
-                  </h2>
-                  
-                  <button
-                    onClick={() => setIsCartOpen(false)}
-                    className="w-10 h-10 flex items-center justify-center group"
-                    aria-label="Close cart"
-                  >
-                    <span className="text-3xl font-black text-[#00ff00] group-hover:rotate-90 transition-transform">×</span>
-                  </button>
-                </div>
-                <div className="w-full h-0.5 bg-[#00ff00] mb-8"></div>
-
-                {/* Cart Items */}
-                <div className="flex-1 overflow-y-auto">
-                  {cart.length === 0 ? (
-                    <div className="text-center py-12">
-                      <p className="text-xl font-mono text-white/30 uppercase tracking-wider">
-                        Your cart is empty
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      {cart.map((item, index) => (
-                        <motion.div
-                          key={item.id}
-                          initial={{ x: 50, opacity: 0 }}
-                          animate={{ x: 0, opacity: 1 }}
-                          transition={{ delay: index * 0.1 }}
-                          className="border-2 border-[#00ff00] p-4"
-                        >
-                          <div className="flex gap-4">
-                            <img 
-                              src={item.image} 
-                              alt={item.title}
-                              className="w-20 h-20 object-cover"
-                            />
-                            <div className="flex-1">
-                              <h3 className="font-black text-sm uppercase tracking-tight text-[#00ff00]">
-                                {item.title}
-                              </h3>
-                              <p className="font-mono text-sm mt-1 text-white/60">{item.price}</p>
-                              
-                              <div className="flex items-center gap-3 mt-2">
-                                <button
-                                  onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                                  className="w-6 h-6 border-2 border-[#00ff00] flex items-center justify-center font-black text-[#00ff00] hover:bg-[#00ff00] hover:text-black transition-colors"
-                                >
-                                  -
-                                </button>
-                                <span className="font-mono text-sm w-8 text-center">{item.quantity}</span>
-                                <button
-                                  onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                                  className="w-6 h-6 border-2 border-[#00ff00] flex items-center justify-center font-black text-[#00ff00] hover:bg-[#00ff00] hover:text-black transition-colors"
-                                >
-                                  +
-                                </button>
-                                <button
-                                  onClick={() => removeFromCart(item.id)}
-                                  className="ml-auto text-xs font-mono uppercase text-red-500 hover:text-red-700 transition-colors"
-                                >
-                                  Remove
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Checkout Section */}
-                {cart.length > 0 && (
-                  <motion.div
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.3 }}
-                    className="border-t-2 border-[#00ff00] pt-6 mt-6"
-                  >
-                    <div className="flex justify-between items-center mb-4">
-                      <span className="font-black uppercase text-lg tracking-tight text-white">Total:</span>
-                      <span className="font-black text-2xl text-[#00ff00]">{totalPrice}</span>
-                    </div>
-                    
-                    <button
-                      onClick={() => {
-                        // For now, just navigate to first item's checkout
-                        // You can customize this to handle multiple items
-                        const firstItem = SHOP_ITEMS.find(item => item.id === cart[0].id);
-                        if (firstItem?.checkoutUrl) {
-                          window.location.href = firstItem.checkoutUrl;
-                        }
-                      }}
-                      className="w-full py-4 bg-[#00ff00] text-black font-black text-lg uppercase tracking-tight hover:bg-black hover:text-[#00ff00] border-2 border-[#00ff00] transition-colors"
-                    >
-                      Checkout
-                    </button>
-                    
-                    <p className="font-mono text-xs text-center text-white/30 mt-4">
-                      Powered by Stripe Secure Checkout
-                    </p>
-                  </motion.div>
-                )}
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
-      {/* Back Button */}
-      <motion.div
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 0.2 }}
-        className="fixed top-[100px] md:top-[120px] lg:top-[160px] left-4 md:left-8 z-30"
-      >
-        <button
-          onClick={() => navigate('/shop')}
-          className="flex items-center gap-2 px-4 py-2 bg-black border-2 border-white/30 text-white font-black uppercase text-xs md:text-sm tracking-tight hover:bg-[#00ff00] hover:text-black hover:border-[#00ff00] transition-all duration-300 shadow-[2px_2px_0px_0px_rgba(0,255,0,0.2)] hover:shadow-[4px_4px_0px_0px_rgba(0,255,0,0.3)] hover:translate-y-[-2px]"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Shop</span>
+    <div className="min-h-screen bg-white">
+      <div className="px-6 pt-8 pb-4 border-b border-gray-100 flex items-center gap-4">
+        <button onClick={() => navigate('/shop')} className="text-gray-400 hover:text-gray-900 transition-colors">
+          <ArrowLeft size={16} />
         </button>
-      </motion.div>
-
-      {/* Main Content */}
-      <div className="pt-[160px] md:pt-[200px] lg:pt-[240px] pb-16 px-4 md:px-8">
-        <div className="max-w-7xl mx-auto">
-          
-          {/* Product Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16">
-            
-            {/* Product Image */}
-            <motion.div
-              initial={{ opacity: 0, x: -30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 }}
-              className="relative"
-            >
-              <div className="sticky top-[180px] md:top-[220px] lg:top-[260px]">
-                <div className="relative bg-black/40 border-4 border-white/20 overflow-hidden max-w-md mx-auto lg:mx-0">
-                  <ImageWithFallback 
-                    src={product.image}
-                    alt={product.title}
-                    className="w-full h-auto object-contain"
-                  />
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Product Details */}
-            <motion.div
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.4 }}
-              className="space-y-8"
-            >
-              
-              {/* Title Section */}
-              <div className="border-b-4 border-white/20 pb-6">
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-black uppercase tracking-tighter mb-4 text-white">
-                  {product.title}
-                </h1>
-                <p className="text-3xl md:text-4xl font-black text-[#00ff00]">
-                  {product.price}
-                </p>
-              </div>
-
-              {/* Description */}
-              <div className="space-y-4">
-                <p className="font-mono text-sm md:text-base uppercase tracking-wider leading-relaxed text-white/50">
-                  {product.description}
-                </p>
-              </div>
-
-              {/* Stock Status */}
-              <div className="flex items-center gap-3 py-4 border-y-2 border-white/20">
-                <div className="w-3 h-3 bg-[#00ff00] animate-pulse"></div>
-                <span className="font-mono text-sm uppercase tracking-widest font-bold text-white">
-                  {product.stock}
-                </span>
-              </div>
-
-              {/* Add to Cart Button */}
-              <motion.button
-                onClick={handleBuyNow}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="w-full bg-black text-[#00ff00] py-4 md:py-6 px-8 font-black uppercase text-lg md:text-xl tracking-tight border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,255,0,1)] hover:shadow-[8px_8px_0px_0px_rgba(0,255,0,1)] hover:translate-y-[-2px] transition-all duration-300"
-              >
-                Add to Cart
-              </motion.button>
-
-              {/* Additional Info */}
-              <div className="space-y-3 pt-6">
-                <div className="flex items-start gap-3">
-                  <div className="w-2 h-2 bg-[#00ff00] mt-2"></div>
-                  <p className="font-mono text-xs uppercase tracking-wider text-white/30">
-                    Secure checkout powered by Stripe
-                  </p>
-                </div>
-              </div>
-
-            </motion.div>
-
-          </div>
-
-        </div>
+        <h1 className="text-[13px] uppercase tracking-widest text-gray-400 font-medium">Shop</h1>
       </div>
 
-      {/* Footer */}
-      <footer className="border-t border-white/10 py-4 px-4 md:px-8 bg-black">
-        <div className="max-w-7xl mx-auto flex justify-between items-center text-[8px] font-mono uppercase tracking-wider text-white/30">
-          <span>©1996 VIC LENTAIGNE</span>
-          <span>ACID INK: #RF2238</span>
+      <div className="px-6 py-10 max-w-2xl flex flex-col md:flex-row gap-10">
+        <div className="md:w-64 flex-shrink-0 bg-gray-50">
+          <img src={product.image} alt={product.title} className="w-full h-auto object-cover" />
         </div>
-      </footer>
 
+        <div className="flex flex-col justify-between">
+          <div>
+            <h2 className="text-[18px] text-gray-900 font-medium mb-1">{product.title}</h2>
+            <p className="text-[12px] uppercase tracking-widest text-gray-400 mb-6">{product.stock}</p>
+            <p className="text-[14px] text-gray-600 leading-relaxed mb-8">{product.description}</p>
+          </div>
+
+          <div>
+            <p className="text-[20px] text-gray-900 font-medium mb-4">{product.price}</p>
+            <a
+              href={product.checkoutUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block px-6 py-3 border border-gray-900 text-[13px] uppercase tracking-widest text-gray-900 hover:bg-gray-900 hover:text-white transition-colors duration-200"
+            >
+              Buy Now
+            </a>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

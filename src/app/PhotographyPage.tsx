@@ -1,354 +1,246 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Instagram, Facebook, Linkedin } from 'lucide-react';
-import { ImageWithFallback } from './components/figma/ImageWithFallback';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
-const PHOTO_ITEMS = [
-	{
-		id: 1,
-		src: '/hwa-1.webp',
-		caption: 'EDITORIAL SERIES / 2024',
-		category: 'editorial',
-	},
-	{
-		id: 2,
-		src: '/hwa-2.webp',
-		caption: 'EDITORIAL SERIES / 2024',
-		category: 'editorial',
-	},
-	{
-		id: 3,
-		src: '/hwa-3.webp',
-		caption: 'EDITORIAL SERIES / 2024',
-		category: 'editorial',
-	},
-	{
-		id: 4,
-		src: '/hwa-4.webp',
-		caption: 'EDITORIAL SERIES / 2024',
-		category: 'editorial',
-	},
-	{
-		id: 5,
-		src: '/hwa-5.webp',
-		caption: 'EDITORIAL SERIES / 2024',
-		category: 'editorial',
-	},
-	{
-		id: 6,
-		src: '/hwa-6.webp',
-		caption: 'EDITORIAL SERIES / 2024',
-		category: 'editorial',
-	},
-	// Personal category images
-	{
-		id: 7,
-		src: '/PERSONAL/35-14-final03.jpg',
-		caption: 'PERSONAL WORK / 2024',
-		category: 'personal',
-	},
-	{
-		id: 8,
-		src: '/PERSONAL/CampbellKing_March25 166.jpg',
-		caption: 'PERSONAL WORK / 2024',
-		category: 'personal',
-	},
-	{
-		id: 9,
-		src: '/PERSONAL/Greece_Milos000098110033.jpg',
-		caption: 'PERSONAL WORK / 2024',
-		category: 'personal',
-	},
-	{
-		id: 10,
-		src: '/PERSONAL/Vic Lentaigne rose bryony (1).jpg',
-		caption: 'PERSONAL WORK / 2024',
-		category: 'personal',
-	},
-	{
-		id: 11,
-		src: '/PERSONAL/VicLentaigne-Tboys-Roll6 1024.jpg',
-		caption: 'PERSONAL WORK / 2024',
-		category: 'personal',
-	},
-	{
-		id: 12,
-		src: '/PERSONAL/VicLentaigne-Tboys-Roll7 1 copy.jpg',
-		caption: 'PERSONAL WORK / 2024',
-		category: 'personal',
-	},
-	{
-		id: 13,
-		src: '/PERSONAL/VicLentaigne-Tboys-Roll7 copy.jpg',
-		caption: 'PERSONAL WORK / 2024',
-		category: 'personal',
-	},
-	{
-		id: 14,
-		src: '/PERSONAL/VicLentaigne_capetown_176 (1).jpg',
-		caption: 'PERSONAL WORK / 2024',
-		category: 'personal',
-	},
-	{
-		id: 15,
-		src: '/PERSONAL/VicLentaigne_capetown_24 copy (1).jpg',
-		caption: 'PERSONAL WORK / 2024',
-		category: 'personal',
-	},
-	{
-		id: 16,
-		src: '/PERSONAL/VicLentaigne_capetown_247 (1).jpg',
-		caption: 'PERSONAL WORK / 2024',
-		category: 'personal',
-	},
-	{
-		id: 17,
-		src: '/PERSONAL/greg-viclentaigne (1).jpg',
-		caption: 'PERSONAL WORK / 2024',
-		category: 'personal',
-	},
-	{
-		id: 18,
-		src: '/PERSONAL/greg2-viclentaigne (1).jpg',
-		caption: 'PERSONAL WORK / 2024',
-		category: 'personal',
-	},
-	{
-		id: 19,
-		src: '/PERSONAL/immy vicy.jpg',
-		caption: 'PERSONAL WORK / 2024',
-		category: 'personal',
-	},
-	{
-		id: 20,
-		src: '/PERSONAL/viclentaigne-2.jpg',
-		caption: 'PERSONAL WORK / 2024',
-		category: 'personal',
-	},
-];
+interface AlbumRow { id: string; title: string; description: string; cover_url: string; sort_order: number; visible: boolean; album_type?: string; }
+interface PhotoRow { id: string; url: string; caption: string; sort_order: number; album_id: string | null; visible: boolean; visibility: 'public' | 'portfolio_only' | 'hidden'; }
 
-function useIsMobile() {
-	const [isMobile, setIsMobile] = useState(false);
-	useEffect(() => {
-		const checkMobile = () => setIsMobile(window.innerWidth < 1024);
-		checkMobile();
-		window.addEventListener('resize', checkMobile);
-		return () => window.removeEventListener('resize', checkMobile);
-	}, []);
-	return isMobile;
+interface Lightbox {
+  photos: PhotoRow[];
+  index: number;
+  albumTitle: string;
 }
 
+const publicAsset = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\//, '')}`;
+
+const FALLBACK_IMAGES = [
+	'/hwa-1.webp', '/hwa-2.webp', '/hwa-3.webp', '/hwa-4.webp', '/hwa-5.webp', '/hwa-6.webp',
+	'/landing-pic-2.webp', '/PERSONAL/VicLentaigne_capetown_176 (1).jpg',
+	'/PERSONAL/VicLentaigne_capetown_24 copy (1).jpg', '/PERSONAL/greg-viclentaigne (1).jpg',
+	'/PERSONAL/immy vicy.jpg', '/PERSONAL/VicLentaigne-Tboys-Roll6 1024.jpg', '/PERSONAL/35-14-final03.jpg',
+].map(publicAsset);
+
 export default function PhotographyPage() {
-	const navigate = useNavigate();
-	const [isMenuOpen, setIsMenuOpen] = useState(false);
-	const [photoCategory, setPhotoCategory] = useState<'editorial' | 'personal' | 'commercial'>('editorial');
-	const [lightboxOpen, setLightboxOpen] = useState(false);
-	const [currentImageIndex, setCurrentImageIndex] = useState(0);
-	const isMobile = useIsMobile();
+	const [searchParams] = useSearchParams();
+	const [albums, setAlbums] = useState<AlbumRow[]>([]);
+	const [photos, setPhotos] = useState<PhotoRow[]>([]);
+	const [useFallback, setUseFallback] = useState(false);
+	const [lightbox, setLightbox] = useState<Lightbox | null>(null);
+	const [direction, setDirection] = useState(0);
+	const [erroredIds, setErroredIds] = useState<Set<string>>(new Set());
 
-	const filteredPhotos = PHOTO_ITEMS.filter(item => item.category === photoCategory);
-
-	const openLightbox = (index: number) => {
-		setCurrentImageIndex(index);
-		setLightboxOpen(true);
-	};
-
-	const closeLightbox = () => {
-		setLightboxOpen(false);
-	};
-
-	const nextImage = () => {
-		setCurrentImageIndex((prev) => (prev + 1) % filteredPhotos.length);
-	};
-
-	const previousImage = () => {
-		setCurrentImageIndex((prev) => (prev - 1 + filteredPhotos.length) % filteredPhotos.length);
-	};
+	const markErrored = (id: string) => setErroredIds(prev => new Set([...prev, id]));
+	const sharedAlbumId = searchParams.get('ref') === 'shared' ? searchParams.get('album') : null;
 
 	useEffect(() => {
-		if (!lightboxOpen) return;
-		const handleKeyDown = (e: KeyboardEvent) => {
-			if (e.key === 'Escape') closeLightbox();
-			if (e.key === 'ArrowRight') nextImage();
-			if (e.key === 'ArrowLeft') previousImage();
+		const load = async () => {
+			try {
+				const [{ data: albumData }, { data: photoData }] = await Promise.all([
+					supabase.from('albums').select('*').order('sort_order', { ascending: true }),
+					supabase.from('photos').select('*').order('sort_order', { ascending: true }),
+				]);
+				if (photoData && photoData.length > 0) {
+					setAlbums(albumData ?? []);
+					setPhotos(photoData);
+				} else {
+					setUseFallback(!sharedAlbumId);
+				}
+			} catch {
+				setUseFallback(!sharedAlbumId);
+			}
 		};
-		window.addEventListener('keydown', handleKeyDown);
-		return () => window.removeEventListener('keydown', handleKeyDown);
-	}, [lightboxOpen, filteredPhotos.length]);
+		load();
+	}, [sharedAlbumId]);
+
+	const resolveVis = (p: PhotoRow) => p.visibility ?? (p.visible ? 'public' : 'hidden');
+
+	const sharedAlbum = sharedAlbumId ? albums.find(a => a.id === sharedAlbumId) ?? null : null;
+	const pageTitle = sharedAlbum?.album_type === 'portfolio' ? 'Portfolio' : 'Photography';
+
+	// Public page: only visible gallery albums and public photos.
+	// Shared link: only the requested visible album, including portfolio-only photos.
+	const galleryAlbums = albums.filter(a => a.visible !== false && (a.album_type ?? 'gallery') === 'gallery');
+	const publicPhotos = useFallback
+		? FALLBACK_IMAGES.map((url, i) => ({ id: String(i), url, caption: '', sort_order: i, album_id: null, visible: true, visibility: 'public' as const }))
+		: photos.filter(p => resolveVis(p) === 'public');
+	const sharedPhotos = sharedAlbum && sharedAlbum.visible !== false
+		? photos.filter(p => p.album_id === sharedAlbum.id && resolveVis(p) !== 'hidden')
+		: [];
+
+	// Group: per gallery album, then standalone
+	const albumGroups: { album: AlbumRow | null; photos: PhotoRow[] }[] = [];
+	if (sharedAlbumId) {
+		albumGroups.push({ album: sharedAlbum, photos: sharedPhotos });
+	} else if (!useFallback) {
+		for (const album of galleryAlbums) {
+			const grouped = publicPhotos.filter(p => p.album_id === album.id);
+			if (grouped.length > 0) albumGroups.push({ album, photos: grouped });
+		}
+		const standalone = publicPhotos.filter(p => !p.album_id);
+		if (standalone.length > 0) albumGroups.push({ album: null, photos: standalone });
+	} else {
+		albumGroups.push({ album: null, photos: publicPhotos });
+	}
+
+	const openLightbox = (groupPhotos: PhotoRow[], index: number, albumTitle: string) => {
+		setDirection(0);
+		setLightbox({ photos: groupPhotos, index, albumTitle });
+	};
+
+	const closeLightbox = () => setLightbox(null);
+
+	const navigate = useCallback((dir: number) => {
+		if (!lightbox) return;
+		const next = lightbox.index + dir;
+		if (next < 0 || next >= lightbox.photos.length) return;
+		setDirection(dir);
+		setLightbox(lb => lb ? { ...lb, index: next } : null);
+	}, [lightbox]);
+
+	// Keyboard nav
+	useEffect(() => {
+		if (!lightbox) return;
+		const handler = (e: KeyboardEvent) => {
+			if (e.key === 'ArrowRight') navigate(1);
+			if (e.key === 'ArrowLeft') navigate(-1);
+			if (e.key === 'Escape') closeLightbox();
+		};
+		window.addEventListener('keydown', handler);
+		return () => window.removeEventListener('keydown', handler);
+	}, [lightbox, navigate]);
+
+	const variants = {
+		enter: (dir: number) => ({ x: dir > 0 ? '100%' : '-100%', opacity: 0 }),
+		center: { x: 0, opacity: 1 },
+		exit: (dir: number) => ({ x: dir > 0 ? '-100%' : '100%', opacity: 0 }),
+	};
 
 	return (
-		<div className="h-screen w-full bg-black flex flex-col font-sans">
-			
-			{/* Main Header */}
-			<motion.header 
-				initial={{ opacity: 0, y: -20 }}
-				animate={{ opacity: 1, y: 0 }}
-				className="fixed top-0 left-0 right-0 px-3 pt-2 pb-1 md:px-6 md:pt-3 md:pb-2 lg:pt-4 lg:pb-2 z-50 bg-black"
-			>
-				<div className="max-w-7xl mx-auto flex items-center justify-between relative z-10">
-					<div className="flex-1">
-						<button
-							onClick={() => navigate('/')}
-							className="text-2xl md:text-4xl lg:text-5xl font-black uppercase tracking-tighter text-transparent hover:text-[#00ff00] transition-colors cursor-pointer" 
-							style={{ WebkitTextStroke: "2px #00ff00" }}
-						>
-							VIC LENTAIGNE
-						</button>
-						<div className="w-full h-0.5 bg-[#00ff00] mt-0.5"></div>
-					</div>
-					
-					{/* Fancy Menu Button */}
-					<button
-						onClick={() => setIsMenuOpen(!isMenuOpen)}
-						className="relative ml-4 w-10 h-10 md:w-12 md:h-12 flex flex-col items-center justify-center gap-1 group"
-						aria-label="Menu"
-					>
-						<motion.span animate={isMenuOpen ? { rotate: 45, y: 6 } : { rotate: 0, y: 0 }} className="w-6 h-0.5 bg-[#00ff00] transition-all group-hover:w-8" />
-						<motion.span animate={isMenuOpen ? { opacity: 0 } : { opacity: 1 }} className="w-6 h-0.5 bg-[#00ff00] transition-all group-hover:w-8" />
-						<motion.span animate={isMenuOpen ? { rotate: -45, y: -6 } : { rotate: 0, y: 0 }} className="w-6 h-0.5 bg-[#00ff00] transition-all group-hover:w-8" />
-					</button>
-				</div>
-			</motion.header>
+		<div className="min-h-screen bg-white">
+			{/* Header */}
+			<div className="px-6 pt-6 pb-4 border-b border-gray-100">
+				<h1 className="text-[13px] uppercase tracking-widest text-gray-400 font-medium">{pageTitle}</h1>
+			</div>
 
-			{/* Slide-out Menu Panel */}
-			<AnimatePresence>
-				{isMenuOpen && (
-					<>
-						<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsMenuOpen(false)} className="fixed inset-0 bg-black/70 z-50 backdrop-blur-sm" />
-						<motion.div
-							initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
-							transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-							className="fixed top-0 right-0 h-full w-full md:w-96 bg-black border-l-4 border-[#00ff00] z-50 shadow-[-10px_0_50px_rgba(0,255,0,0.2)]"
-						>
-							<div className="p-8 h-full flex flex-col">
-								<div className="flex items-start justify-between mb-4">
-									<h2 className="text-3xl md:text-4xl font-bold uppercase tracking-tighter text-transparent" style={{ WebkitTextStroke: "2px #00ff00" }}>VIC LENTAIGNE</h2>
-									<button onClick={() => setIsMenuOpen(false)} className="w-10 h-10 flex items-center justify-center group" aria-label="Close menu">
-										<span className="text-3xl font-black text-[#00ff00] group-hover:rotate-90 transition-transform">×</span>
-									</button>
-								</div>
-								<div className="w-full h-0.5 bg-[#00ff00] mb-8"></div>
-								<nav className="flex-1 flex flex-col gap-6">
-									{[['/', 'Home'], ['/film', 'Film & Direction'], ['/about', 'About'], ['/shop', 'Shop']].map(([path, label], i) => (
-										<motion.button key={path} initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.1 + i * 0.05 }}
-											onClick={() => { setIsMenuOpen(false); navigate(path); }} className="group relative text-left">
-											<span className="text-3xl md:text-4xl font-bold uppercase tracking-tighter text-transparent group-hover:text-[#00ff00] transition-all duration-300" style={{ WebkitTextStroke: "2px #00ff00" }}>{label}</span>
-											<motion.div className="h-0.5 bg-[#00ff00] mt-2" initial={{ width: 0 }} whileHover={{ width: '100%' }} transition={{ duration: 0.3 }} />
-										</motion.button>
-									))}
-									<motion.div initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.15 }} className="relative text-left">
-										<div className="inline-block">
-											<span className="text-3xl md:text-4xl font-bold uppercase tracking-tighter text-[#00ff00]" style={{ WebkitTextStroke: "2px #00ff00" }}>Photography</span>
-											<div className="h-0.5 bg-[#00ff00] mt-2 w-full" />
-										</div>
-									</motion.div>
-								</nav>
-								<motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.4 }} className="border-t-2 border-[#00ff00] pt-6 mt-6 text-center">
-									<div className="flex gap-6 mb-6 justify-center">
-										<a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="hover:scale-110 transition-transform" aria-label="Instagram"><Instagram className="w-8 h-8 text-[#00ff00]" strokeWidth={1.5} /></a>
-										<a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="hover:scale-110 transition-transform" aria-label="Facebook"><Facebook className="w-8 h-8 text-[#00ff00]" strokeWidth={1.5} /></a>
-										<a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="hover:scale-110 transition-transform" aria-label="LinkedIn"><Linkedin className="w-8 h-8 text-[#00ff00]" strokeWidth={1.5} /></a>
-									</div>
-									<p className="font-mono text-xs text-[#00ff00]/50 mt-2">hello@viclentaigne.com</p>
-								</motion.div>
+			{/* Photo grid grouped by album */}
+			<div className="max-w-[1280px] px-4 py-4 md:px-6 md:py-5">
+				{albumGroups.map(({ album, photos: groupPhotos }) => (
+					<div key={album?.id ?? 'standalone'} className="mb-8 last:mb-0">
+						{album && (
+							<div className="flex items-baseline gap-3 mb-4">
+								<h2 className="text-[11px] uppercase tracking-widest text-gray-900 font-medium">{album.title}</h2>
+								{album.description && <span className="text-[11px] text-gray-400">{album.description}</span>}
 							</div>
-						</motion.div>
-					</>
-				)}
-			</AnimatePresence>
+						)}
+						{(() => {
+							const visible = groupPhotos.filter(p => !erroredIds.has(p.id) && p.url);
+
+							return (
+								<div className="grid grid-cols-1 gap-x-5 gap-y-16 sm:grid-cols-2">
+									{visible.map((photo) => {
+										const idx = visible.findIndex(p => p.id === photo.id);
+										return (
+											<div key={photo.id}
+												className="cursor-pointer group"
+												onClick={() => openLightbox(visible, idx, album?.title ?? (photo.caption || 'Photo'))}>
+												<figure>
+													<div className="flex min-h-[calc(100dvh-210px)] items-start justify-center bg-white">
+														<img
+															src={photo.url}
+															alt={photo.caption}
+															className="block max-h-[calc(100dvh-210px)] max-w-full object-contain group-hover:opacity-90 transition-opacity duration-300"
+															onError={() => markErrored(photo.id)}
+															onLoad={e => {
+																const img = e.currentTarget;
+																if (img.naturalWidth === 0 || img.naturalHeight === 0) {
+																	markErrored(photo.id);
+																}
+															}}
+														/>
+													</div>
+													{photo.caption && (
+														<figcaption className="text-[10px] leading-4 text-gray-400 mt-1 truncate">{photo.caption}</figcaption>
+													)}
+												</figure>
+											</div>
+										);
+									})}
+								</div>
+							);
+						})()}
+					</div>
+				))}
+			</div>
 
 			{/* Lightbox */}
 			<AnimatePresence>
-				{lightboxOpen && (
-					<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] bg-black flex items-center justify-center">
-						<button onClick={closeLightbox} className="absolute top-4 right-4 md:top-8 md:right-8 z-10 w-12 h-12 flex items-center justify-center group" aria-label="Close lightbox">
-							<span className="text-4xl font-black text-[#00ff00] group-hover:rotate-90 transition-transform">×</span>
-						</button>
-						<button onClick={previousImage} className="absolute left-4 md:left-8 z-10 w-12 h-12 md:w-16 md:h-16 flex items-center justify-center bg-black/50 hover:bg-[#00ff00] hover:text-black transition-all group" aria-label="Previous image">
-							<span className="text-2xl md:text-3xl font-black text-[#00ff00] group-hover:text-black">‹</span>
-						</button>
-						<button onClick={nextImage} className="absolute right-4 md:right-8 z-10 w-12 h-12 md:w-16 md:h-16 flex items-center justify-center bg-black/50 hover:bg-[#00ff00] hover:text-black transition-all group" aria-label="Next image">
-							<span className="text-2xl md:text-3xl font-black text-[#00ff00] group-hover:text-black">›</span>
-						</button>
-						<div className="relative w-full h-full flex items-center justify-center">
-							<motion.div key={currentImageIndex} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.3 }} className="relative w-full h-full max-w-[100vw] max-h-[100vh] flex items-center justify-center">
-								<ImageWithFallback src={filteredPhotos[currentImageIndex].src} alt={filteredPhotos[currentImageIndex].caption} className="w-full h-full object-contain" />
-								<div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3 md:p-4">
-									<p className="font-mono text-xs md:text-sm uppercase tracking-wider text-[#00ff00]">{filteredPhotos[currentImageIndex].caption}</p>
-									<p className="font-mono text-xs text-white/40 mt-1">{currentImageIndex + 1} / {filteredPhotos.length}</p>
-								</div>
-							</motion.div>
+				{lightbox && (
+					<motion.div
+						initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+						className="fixed inset-0 z-50 bg-black/95 flex flex-col"
+						onClick={closeLightbox}
+					>
+						{/* Top bar */}
+						<div className="flex items-center justify-between px-6 py-4 shrink-0" onClick={e => e.stopPropagation()}>
+							<div>
+								<p className="text-white text-[13px] tracking-wide font-medium">{lightbox.albumTitle}</p>
+								<p className="text-white/40 text-[11px] tracking-widest mt-0.5">
+									{lightbox.index + 1} / {lightbox.photos.length}
+								</p>
+							</div>
+							<button onClick={closeLightbox} className="text-white/60 hover:text-white transition-colors p-1">
+								<X size={22} />
+							</button>
 						</div>
+
+						{/* Photo */}
+						<div className="flex-1 relative overflow-hidden" onClick={e => e.stopPropagation()}>
+							<AnimatePresence custom={direction} mode="wait">
+								<motion.div
+									key={lightbox.index}
+									custom={direction}
+									variants={variants}
+									initial="enter" animate="center" exit="exit"
+									transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+									className="absolute inset-0 flex items-center justify-center p-4"
+								>
+									<img
+										src={lightbox.photos[lightbox.index].url}
+										alt={lightbox.photos[lightbox.index].caption}
+										className="max-w-full max-h-full object-contain select-none"
+										draggable={false}
+									/>
+								</motion.div>
+							</AnimatePresence>
+
+							{/* Prev / Next */}
+							<button
+								onClick={() => navigate(-1)}
+								disabled={lightbox.index === 0}
+								className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full transition disabled:opacity-20 text-white"
+							>
+								<ChevronLeft size={20} />
+							</button>
+							<button
+								onClick={() => navigate(1)}
+								disabled={lightbox.index === lightbox.photos.length - 1}
+								className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full transition disabled:opacity-20 text-white"
+							>
+								<ChevronRight size={20} />
+							</button>
+						</div>
+
+						{/* Caption */}
+						{lightbox.photos[lightbox.index].caption && (
+							<div className="px-6 py-3 shrink-0 text-center" onClick={e => e.stopPropagation()}>
+								<p className="text-white/60 text-[12px] tracking-wide">{lightbox.photos[lightbox.index].caption}</p>
+							</div>
+						)}
 					</motion.div>
 				)}
 			</AnimatePresence>
-
-			{/* Compact Navigation Bar */}
-			<motion.div 
-				initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-				className="fixed top-[50px] md:top-[70px] lg:top-[85px] left-0 right-0 z-40 px-3 md:px-6 py-1 bg-black border-b border-white/10"
-			>
-				<div className="max-w-7xl mx-auto flex flex-wrap items-center gap-2 relative z-10">
-					<div className="px-3 md:px-4 py-1 border-2 border-[#00ff00] bg-[#00ff00] text-black font-bold uppercase text-[10px] md:text-xs tracking-tight shadow-[2px_2px_0px_0px_rgba(0,255,0,0.4)]">
-						Photography
-					</div>
-					<div className="h-4 w-px bg-white/20 hidden md:block"></div>
-					<div className="flex gap-1.5">
-						{(['editorial', 'personal', 'commercial'] as const).map(cat => (
-							<button key={cat} onClick={() => setPhotoCategory(cat)}
-								className={`px-2 md:px-3 py-1 border-2 font-mono font-normal uppercase text-[9px] md:text-[10px] tracking-tight transition-all ${
-									photoCategory === cat ? 'border-[#00ff00] bg-[#00ff00] text-black' : 'border-white/30 bg-transparent text-white/60 hover:border-white/60 hover:text-white'
-								}`}>
-								{cat}
-							</button>
-						))}
-					</div>
-					<div className="ml-auto hidden lg:block">
-						<p className="font-mono text-[9px] uppercase tracking-widest text-white/30">Selected Works 1999–2026</p>
-					</div>
-				</div>
-			</motion.div>
-
-			{/* Content Area */}
-			<div className="fixed top-[90px] md:top-[105px] lg:top-[120px] bottom-[30px] left-0 right-0 overflow-y-auto bg-black">
-				<div className="px-3 md:px-6 py-2">
-					<div className="max-w-7xl mx-auto">
-						
-						{/* Commercial Portfolio Message */}
-						{photoCategory === 'commercial' && (
-							<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8 p-6 md:p-8 border-4 border-[#00ff00] bg-black text-center">
-								<h3 className="text-2xl md:text-3xl font-black uppercase tracking-tighter mb-3 text-white">Commercial Portfolio</h3>
-								<p className="font-mono text-sm md:text-base uppercase tracking-widest text-white/50">Available on Request</p>
-								<p className="font-mono text-xs text-white/30 mt-4">Contact: hello@viclentaigne.com</p>
-							</motion.div>
-						)}
-
-						<div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-6 lg:gap-8">
-							{filteredPhotos.map((photo, index) => (
-								<motion.div key={photo.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }} className="cursor-pointer" onClick={() => openLightbox(index)}>
-									<div className="relative mb-1 min-h-[500px] md:min-h-[600px] lg:min-h-0 flex items-center justify-center bg-black/40">
-										<ImageWithFallback src={photo.src} alt={photo.caption} className="w-full h-auto object-contain max-h-[calc(100vh-180px)] md:max-h-[calc(100vh-200px)] lg:max-h-[calc(100vh-160px)]" />
-									</div>
-									<div className="flex justify-between items-center pt-2 border-t border-white/10">
-										<p className="font-mono text-xs uppercase tracking-normal text-white/60">{photo.caption}</p>
-										<p className="font-mono text-xs uppercase tracking-wider text-white/30">#{String(index + 1).padStart(3, '0')}</p>
-									</div>
-								</motion.div>
-							))}
-						</div>
-					</div>
-				</div>
-			</div>
-
-			{/* Footer */}
-			<footer className="fixed bottom-0 left-0 right-0 border-t border-white/10 py-1 px-3 md:px-6 bg-black z-20">
-				<div className="max-w-7xl mx-auto flex justify-between items-center text-[7px] font-mono uppercase tracking-wider text-white/30">
-					<span>©1996 VIC LENTAIGNE</span>
-					<span>PHOTOGRAPHY</span>
-				</div>
-			</footer>
-
 		</div>
 	);
 }

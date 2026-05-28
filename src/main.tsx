@@ -6,26 +6,32 @@ import FilmPage from "./app/FilmPage.tsx";
 import AboutPage from "./app/AboutPage.tsx";
 import ShopPage from "./app/ShopPage.tsx";
 import ProductPage from "./app/ProductPage.tsx";
-import LoadingDemo from "./app/LoadingDemo.tsx";
-import TestImport from "./app/TestImport.tsx";
-import BackgroundsDemo from "./app/BackgroundsDemo.tsx";
+import Layout from "./app/Layout.tsx";
 import { CartProvider } from "./app/CartContext.tsx";
+import AdminPage from "./app/AdminPage.tsx";
 import "./styles/index.css";
+
+const basename = import.meta.env.BASE_URL === "/" ? undefined : import.meta.env.BASE_URL;
 
 function App() {
   return (
     <CartProvider>
-      <BrowserRouter>
+      <BrowserRouter basename={basename}>
         <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/photography" element={<PhotographyPage />} />
-          <Route path="/film" element={<FilmPage />} />
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/shop" element={<ShopPage />} />
-          <Route path="/shop/:id" element={<ProductPage />} />
-          <Route path="/loading-demo" element={<LoadingDemo />} />
-          <Route path="/backgrounds-demo" element={<BackgroundsDemo />} />
-          <Route path="/test" element={<TestImport />} />
+          <Route path="/admin" element={<AdminPage />} />
+          <Route path="*" element={
+            <Layout>
+              <Routes>
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/photography" element={<PhotographyPage />} />
+                <Route path="/video" element={<FilmPage />} />
+                <Route path="/film" element={<FilmPage />} />
+                <Route path="/about" element={<AboutPage />} />
+                <Route path="/shop" element={<ShopPage />} />
+                <Route path="/shop/:id" element={<ProductPage />} />
+              </Routes>
+            </Layout>
+          } />
         </Routes>
       </BrowserRouter>
     </CartProvider>
