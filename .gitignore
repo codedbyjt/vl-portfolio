@@ -32,3 +32,8 @@ yarn-error.log*
 # package-lock.json
 
 #instructions for v2
+.github/copilot-instructions.md
+.github/instructions/copilot-instructions.md.instructions.md
+.github/copilot-instructions.md
+.github/instructions/copilot-instructions.md
+.github/copilot-instructions.md
