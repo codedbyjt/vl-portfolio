@@ -11,6 +11,7 @@ import {
   DndContext,
   closestCenter,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -854,7 +855,14 @@ function PhotographyAdmin() {
   const imgRef = useRef<HTMLImageElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const newAlbumFormRef = useRef<HTMLDivElement | null>(null);
-  const sensors = useSensors(useSensor(PointerSensor));
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 180, tolerance: 8 },
+    }),
+  );
 
   const showToast = (msg: string, type: "success" | "error" = "error") => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -1890,11 +1898,11 @@ function VideosAdmin() {
             placeholder="Video title"
           />
           <input
-            type="url"
+            type="text"
             value={editingUrl}
             onChange={(e) => setEditingUrl(e.target.value)}
             className="w-full border border-gray-200 px-3 py-2 text-sm outline-none focus:border-gray-900 mb-3"
-            placeholder="Video or YouTube URL"
+            placeholder="Video file or YouTube URL"
           />
           <div className="flex gap-2">
             <button
