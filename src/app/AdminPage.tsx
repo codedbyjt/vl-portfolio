@@ -280,10 +280,10 @@ function SortablePhoto({
           e.stopPropagation();
           onToggleHome(photo);
         }}
-        className={`absolute bottom-12 right-1 z-10 text-[12px] px-2 py-1 rounded transition-colors select-none md:bottom-10 md:text-[11px] md:px-1.5 md:py-0.5 ${
+        className={`hidden md:block absolute bottom-10 right-1 z-10 text-[11px] px-1.5 py-0.5 rounded transition-colors select-none ${
           photo.home_featured
             ? "bg-amber-400 text-white"
-            : "bg-white/90 text-gray-500 md:opacity-0 md:group-hover:opacity-100"
+            : "bg-white/90 text-gray-500 opacity-0 group-hover:opacity-100"
         }`}
       >
         ⌂
@@ -321,6 +321,23 @@ function SortablePhoto({
         ) : null}
       </div>
       <div className="flex items-center justify-end gap-2 border-t border-gray-200 bg-white px-2 py-2 md:absolute md:inset-0 md:border-0 md:bg-black/50 md:opacity-0 md:group-hover:opacity-100 md:transition-opacity md:items-end md:p-2">
+        {/* Home feature toggle — mobile only, lives in the action bar */}
+        <button
+          title={
+            photo.home_featured ? "Remove from homepage" : "Feature on homepage"
+          }
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleHome(photo);
+          }}
+          className={`md:hidden text-[10px] uppercase tracking-widest px-3 py-1.5 border transition-colors mr-auto ${
+            photo.home_featured
+              ? "bg-amber-400 text-white border-amber-400"
+              : "bg-white border-gray-200 text-gray-500"
+          }`}
+        >
+          ⌂
+        </button>
         <button
           onClick={() => onEdit(photo)}
           className="text-[10px] uppercase tracking-widest bg-gray-900 text-white px-3 py-1.5 hover:bg-gray-700 transition-colors md:bg-white md:text-gray-900 md:px-2 md:py-1 md:hover:bg-gray-200"
