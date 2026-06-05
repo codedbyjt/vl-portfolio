@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabase";
 
 interface VideoRow {
   id: string;
@@ -11,11 +11,13 @@ interface VideoRow {
 function getYouTubeId(url: string) {
   try {
     const parsed = new URL(url);
-    if (parsed.hostname.includes('youtu.be')) return parsed.pathname.slice(1);
-    if (parsed.hostname.includes('youtube.com')) {
-      if (parsed.pathname.startsWith('/shorts/')) return parsed.pathname.split('/')[2];
-      if (parsed.pathname.startsWith('/embed/')) return parsed.pathname.split('/')[2];
-      return parsed.searchParams.get('v');
+    if (parsed.hostname.includes("youtu.be")) return parsed.pathname.slice(1);
+    if (parsed.hostname.includes("youtube.com")) {
+      if (parsed.pathname.startsWith("/shorts/"))
+        return parsed.pathname.split("/")[2];
+      if (parsed.pathname.startsWith("/embed/"))
+        return parsed.pathname.split("/")[2];
+      return parsed.searchParams.get("v");
     }
   } catch {
     return null;
@@ -30,9 +32,9 @@ export default function FilmPage() {
   useEffect(() => {
     const loadVideos = async () => {
       const { data } = await supabase
-        .from('videos')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .from("videos")
+        .select("*")
+        .order("sort_order", { ascending: true });
 
       setVideos(data ?? []);
       setLoading(false);
@@ -44,11 +46,15 @@ export default function FilmPage() {
   return (
     <div className="min-h-screen bg-white">
       <div className="px-6 pt-8 pb-4 border-b border-gray-100">
-        <h1 className="text-[13px] uppercase tracking-widest text-gray-400 font-medium">Video</h1>
+        <h1 className="text-[13px] uppercase tracking-widest text-gray-400 font-medium">
+          Video
+        </h1>
       </div>
       <div className="px-6 py-10 max-w-4xl">
         {loading && (
-          <p className="text-[12px] uppercase tracking-widest text-gray-400">Loading videos…</p>
+          <p className="text-[12px] uppercase tracking-widest text-gray-400">
+            Loading videos…
+          </p>
         )}
 
         {!loading && videos.length === 0 && (
