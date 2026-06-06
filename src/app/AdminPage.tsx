@@ -1,6 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import JSZip from "jszip";
 import { supabase } from "../lib/supabase";
+import {
+  loadPhotoAlbumLinks,
+  mergePhotoAlbumIds,
+  photoBelongsToAlbum,
+  savePhotoAlbumLinks,
+} from "../lib/photoAlbums";
+import { isCloudinaryUrl, uploadMedia } from "../lib/mediaStorage";
 import ReactCrop, {
   type Crop,
   centerCrop,
@@ -27,7 +34,7 @@ import { CreateAlbumModal } from "./components/CreateAlbumModal";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Tab = "photography" | "videos" | "shop";
+type Tab = "photography" | "portfolio" | "videos" | "shop";
 
 interface PhotoRow {
   id: string;
@@ -35,6 +42,8 @@ interface PhotoRow {
   caption: string;
   sort_order: number;
   album_id: string | null;
+  album_ids?: string[];
+  display_single?: boolean;
   visible: boolean;
   visibility: "public" | "portfolio_only" | "hidden";
   home_featured: boolean;
@@ -69,6 +78,15 @@ export default function AdminPage() {
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState("");
   const [tab, setTab] = useState<Tab>("photography");
+  const [portfolioPageHref, setPortfolioPageHref] = useState<string | null>(null);
+  const pageHref =
+    tab === "photography"
+      ? `${import.meta.env.BASE_URL}photography`
+      : tab === "portfolio"
+        ? portfolioPageHref
+        : tab === "videos"
+          ? `${import.meta.env.BASE_URL}film`
+          : `${import.meta.env.BASE_URL}shop`;
 
   // Check existing session on mount
   useEffect(() => {
@@ -162,8 +180,8 @@ export default function AdminPage() {
       </div>
 
       {/* Tabs */}
-      <div className="bg-white border-b border-gray-200 px-4 flex gap-5 overflow-x-auto sm:px-6 sm:gap-6">
-        {(["photography", "videos", "shop"] as Tab[]).map((t) => (
+      <div className="bg-white border-b border-gray-200 px-4 flex items-center gap-5 overflow-x-auto sm:px-6 sm:gap-6">
+        {(["photography", "portfolio", "videos", "shop"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -173,15 +191,28 @@ export default function AdminPage() {
                 : "border-transparent text-gray-400 hover:text-gray-700"
             }`}
           >
-            {t}
+            {t === "portfolio" ? "portfolios" : t}
           </button>
         ))}
+        {pageHref && (
+          <a
+            href={pageHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ml-auto flex items-center gap-1.5 py-2 px-3 text-xs uppercase tracking-widest text-gray-400 hover:text-gray-900 border border-gray-200 rounded transition-colors whitespace-nowrap"
+          >
+            <span aria-hidden="true">↗</span>
+            View {tab === "videos" ? "film" : tab === "portfolio" ? "portfolio" : tab} page
+          </a>
+        )}
       </div>
 
       {/* Content */}
       <div className="px-4 py-6 max-w-4xl sm:px-6 sm:py-8">
         {tab === "photography" ? (
           <PhotographyAdmin />
+        ) : tab === "portfolio" ? (
+          <PortfolioAdmin onViewPageHrefChange={setPortfolioPageHref} />
         ) : tab === "videos" ? (
           <VideosAdmin />
         ) : (
@@ -487,18 +518,37 @@ function EditPhotoModal({
   onSave: (
     id: string,
     caption: string,
-    albumId: string | null,
+    albumIds: string[],
     visibility: "public" | "portfolio_only" | "hidden",
     homeFeatured: boolean,
+    displaySingle: boolean,
   ) => void;
   onClose: () => void;
 }) {
   const [caption, setCaption] = useState(photo.caption);
-  const [albumId, setAlbumId] = useState<string | null>(photo.album_id);
+  const [albumIds, setAlbumIds] = useState<string[]>(
+    photo.album_id ? [photo.album_id] : [],
+  );
   const [visibility, setVisibility] = useState<
     "public" | "portfolio_only" | "hidden"
   >(photo.visibility ?? (photo.visible ? "public" : "hidden"));
   const [homeFeatured, setHomeFeatured] = useState(!!photo.home_featured);
+  const [displaySingle, setDisplaySingle] = useState(!!photo.display_single);
+
+  // Load existing multi-album links on open
+  useEffect(() => {
+    loadPhotoAlbumLinks().then((links) => {
+      const ids = links
+        .filter((l) => l.photo_id === photo.id)
+        .map((l) => l.album_id);
+      if (ids.length > 0) setAlbumIds(ids);
+    });
+  }, [photo.id]);
+
+  const toggleAlbum = (id: string) =>
+    setAlbumIds((prev) =>
+      prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id],
+    );
 
   const visOptions: {
     value: "public" | "portfolio_only" | "hidden";
@@ -506,104 +556,114 @@ function EditPhotoModal({
     desc: string;
   }[] = [
     { value: "public", label: "Public", desc: "Visible everywhere" },
-    {
-      value: "portfolio_only",
-      label: "Portfolio only",
-      desc: "Only via shared link",
-    },
+    { value: "portfolio_only", label: "Portfolio only", desc: "Only via shared link" },
     { value: "hidden", label: "Hidden", desc: "Not shown anywhere" },
   ];
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-6">
-      <div className="bg-white w-full max-w-md p-6">
-        <h3 className="text-xs uppercase tracking-widest text-gray-400 mb-4">
-          Edit Photo
-        </h3>
-        <img
-          src={photo.url}
-          alt=""
-          className="w-full max-h-48 object-contain bg-gray-50 mb-4"
-        />
-        <input
-          type="text"
-          placeholder="Caption"
-          value={caption}
-          onChange={(e) => setCaption(e.target.value)}
-          className="w-full border border-gray-200 px-4 py-3 text-sm outline-none focus:border-gray-900 mb-3"
-        />
-        <select
-          value={albumId ?? ""}
-          onChange={(e) => setAlbumId(e.target.value || null)}
-          className="w-full border border-gray-200 px-4 py-3 text-sm outline-none focus:border-gray-900 mb-4 bg-white"
-        >
-          <option value="">No album / standalone</option>
-          {albums.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.title}
-            </option>
-          ))}
-        </select>
-        <div className="mb-5">
-          <p className="text-xs uppercase tracking-widest text-gray-400 mb-2">
-            Visibility
-          </p>
-          <div className="flex gap-2">
-            {visOptions.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => setVisibility(opt.value)}
-                className={`flex-1 text-center py-2 border text-xs transition-colors ${
-                  visibility === opt.value
-                    ? "border-gray-900 text-gray-900 bg-gray-50"
-                    : "border-gray-200 text-gray-400 hover:text-gray-700"
-                }`}
-              >
-                <div className="uppercase tracking-widest font-medium">
-                  {opt.label}
-                </div>
-              </button>
-            ))}
+    <div className="fixed inset-0 bg-black/70 z-50 flex items-start justify-center overflow-y-auto p-4">
+      <div className="my-4 bg-white w-full max-w-md max-h-[calc(100dvh-2rem)] flex min-h-0 flex-col overflow-hidden">
+        {/* Sticky header */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
+          <h3 className="text-xs uppercase tracking-widest text-gray-400">Edit Photo</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-900 text-lg leading-none">×</button>
+        </div>
+        {/* Scrollable body */}
+        <div className="min-h-0 overflow-y-auto px-5 pb-5 flex flex-col gap-4">
+          <img src={photo.url} alt="" className="w-full max-h-48 object-contain bg-gray-50" />
+          <input
+            type="text"
+            placeholder="Caption"
+            value={caption}
+            onChange={(e) => setCaption(e.target.value)}
+            className="w-full border border-gray-200 px-4 py-3 text-sm outline-none focus:border-gray-900"
+          />
+          {/* Multi-select album checkboxes */}
+          <div className="border border-gray-200 p-3">
+            <p className="text-[10px] uppercase tracking-widest text-gray-400 mb-2">Albums</p>
+            <div className="flex flex-col gap-2">
+              {albums.map((a) => (
+                <label key={a.id} className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={albumIds.includes(a.id)}
+                    onChange={() => toggleAlbum(a.id)}
+                    className="w-4 h-4 accent-gray-900"
+                  />
+                  <div>
+                    <p className="text-sm text-gray-900 leading-none">{a.title}</p>
+                    <p className="text-[10px] uppercase tracking-widest text-gray-400 mt-0.5">
+                      {a.album_type ?? "gallery"}
+                    </p>
+                  </div>
+                </label>
+              ))}
+            </div>
+            <p className="text-[10px] text-gray-400 mt-2">Leave all unchecked to keep this photo standalone.</p>
           </div>
-          <p className="text-[10px] text-gray-400 mt-1.5">
-            {visOptions.find((o) => o.value === visibility)?.desc}
-          </p>
-        </div>
-        <div className="mb-5">
-          <label className="flex items-center gap-3 cursor-pointer group">
-            <div
-              onClick={() => setHomeFeatured((v) => !v)}
-              className={`w-9 h-5 rounded-full transition-colors flex items-center px-0.5 ${homeFeatured ? "bg-amber-400" : "bg-gray-200"}`}
-            >
+          <div>
+            <p className="text-xs uppercase tracking-widest text-gray-400 mb-2">Visibility</p>
+            <div className="flex gap-2">
+              {visOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setVisibility(opt.value)}
+                  className={`flex-1 text-center py-2 border text-xs transition-colors ${
+                    visibility === opt.value
+                      ? "border-gray-900 text-gray-900 bg-gray-50"
+                      : "border-gray-200 text-gray-400 hover:text-gray-700"
+                  }`}
+                >
+                  <div className="uppercase tracking-widest font-medium">{opt.label}</div>
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-gray-400 mt-1.5">
+              {visOptions.find((o) => o.value === visibility)?.desc}
+            </p>
+          </div>
+          <div>
+            <label className="flex items-center gap-3 cursor-pointer">
               <div
-                className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${homeFeatured ? "translate-x-4" : "translate-x-0"}`}
-              />
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-widest text-gray-700 leading-none">
-                Feature on homepage
-              </p>
-              <p className="text-[10px] text-gray-400 mt-0.5">
-                Shown in the rotating homepage grid
-              </p>
-            </div>
-          </label>
-        </div>
-        <div className="flex gap-3">
-          <button
-            onClick={() =>
-              onSave(photo.id, caption, albumId, visibility, homeFeatured)
-            }
-            className="bg-gray-900 text-white text-xs uppercase tracking-widest px-5 py-2 hover:bg-gray-700"
-          >
-            Save
-          </button>
-          <button
-            onClick={onClose}
-            className="text-xs uppercase tracking-widest text-gray-400 hover:text-gray-900 px-3 py-2"
-          >
-            Cancel
-          </button>
+                onClick={() => setHomeFeatured((v) => !v)}
+                className={`w-9 h-5 rounded-full transition-colors flex items-center px-0.5 ${homeFeatured ? "bg-amber-400" : "bg-gray-200"}`}
+              >
+                <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${homeFeatured ? "translate-x-4" : "translate-x-0"}`} />
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-widest text-gray-700 leading-none">Feature on homepage</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">Shown in the rotating homepage grid</p>
+              </div>
+            </label>
+          </div>
+          <div>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <div
+                onClick={() => setDisplaySingle((v) => !v)}
+                className={`w-9 h-5 rounded-full transition-colors flex items-center px-0.5 ${displaySingle ? "bg-gray-900" : "bg-gray-200"}`}
+              >
+                <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${displaySingle ? "translate-x-4" : "translate-x-0"}`} />
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-widest text-gray-700 leading-none">Display as single</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">Stops this portrait photo pairing with another portrait</p>
+              </div>
+            </label>
+          </div>
+          <div className="sticky bottom-0 -mx-5 mt-2 flex gap-3 border-t border-gray-100 bg-white px-5 py-4">
+            <button
+              onClick={() => onSave(photo.id, caption, albumIds, visibility, homeFeatured, displaySingle)}
+              className="bg-gray-900 text-white text-xs uppercase tracking-widest px-5 py-2 hover:bg-gray-700"
+            >
+              Save
+            </button>
+            <button
+              onClick={onClose}
+              className="text-xs uppercase tracking-widest text-gray-400 hover:text-gray-900 px-3 py-2"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -763,6 +823,16 @@ function getFileExtension(url: string, contentType: string | null) {
   return "jpg";
 }
 
+async function loadPhotosWithAlbumIds() {
+  const [{ data, error }, links] = await Promise.all([
+    supabase.from("photos").select("*").order("sort_order", { ascending: true }),
+    loadPhotoAlbumLinks(),
+  ]);
+
+  if (error) throw error;
+  return mergePhotoAlbumIds(data ?? [], links);
+}
+
 function DownloadZipButton({ album }: { album: AlbumRow }) {
   const [state, setState] = useState<"idle" | "loading" | "error">("idle");
 
@@ -771,15 +841,10 @@ function DownloadZipButton({ album }: { album: AlbumRow }) {
     setState("loading");
 
     try {
-      const { data, error } = await supabase
-        .from("photos")
-        .select("url, caption, sort_order, visibility, visible")
-        .eq("album_id", album.id)
-        .order("sort_order", { ascending: true });
-
-      if (error) throw error;
-      const photos = (data ?? []).filter(
+      const allPhotos = await loadPhotosWithAlbumIds();
+      const photos = allPhotos.filter(
         (photo) =>
+          photoBelongsToAlbum(photo, album.id) &&
           (photo.visibility ?? (photo.visible ? "public" : "hidden")) !==
           "hidden",
       );
@@ -903,19 +968,17 @@ function PhotographyAdmin() {
   };
 
   const loadPhotos = async (albumId?: string) => {
-    let q = supabase
-      .from("photos")
-      .select("*")
-      .order("sort_order", { ascending: true });
-    if (albumId) q = q.eq("album_id", albumId);
-    const { data, error } = await q;
-    if (error) {
-      showToast(`Failed to load photos: ${error.message}`);
+    try {
+      const mergedPhotos = await loadPhotosWithAlbumIds();
+      if (albumId) {
+        setPhotos(mergedPhotos.filter((photo) => photoBelongsToAlbum(photo, albumId)));
+      } else {
+        setAllPhotos(mergedPhotos);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      showToast(`Failed to load photos: ${message}`);
       return;
-    }
-    if (data) {
-      if (albumId) setPhotos(data);
-      else setAllPhotos(data);
     }
   };
 
@@ -939,26 +1002,34 @@ function PhotographyAdmin() {
     const ext =
       fileOrBlob instanceof File ? fileOrBlob.name.split(".").pop() : "jpg";
     const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const { error: sErr } = await supabase.storage
-      .from("Photographs")
-      .upload(fileName, fileOrBlob, {
-        cacheControl: "3600",
-        upsert: false,
-        contentType:
-          fileOrBlob instanceof File ? fileOrBlob.type : "image/jpeg",
-      });
-    if (sErr) throw sErr;
-    const { data: urlData } = supabase.storage
-      .from("Photographs")
-      .getPublicUrl(fileName);
-    const currentPhotos = selectedAlbum ? photos : allPhotos;
-    const { error: dErr } = await supabase.from("photos").insert({
-      url: urlData.publicUrl,
-      caption,
-      sort_order: currentPhotos.length,
-      album_id: selectedAlbum?.id ?? null,
+    const upload = await uploadMedia({
+      bucket: "Photographs",
+      folder:
+        selectedAlbum?.album_type === "portfolio" ? "portfolio" : "photographs",
+      file: fileOrBlob,
+      fileName,
+      contentType: fileOrBlob instanceof File ? fileOrBlob.type : "image/jpeg",
+      resourceType: "image",
     });
+    const currentPhotos = selectedAlbum ? photos : allPhotos;
+    const visibility =
+      selectedAlbum?.album_type === "portfolio" ? "portfolio_only" : "public";
+    const { data: insertedPhoto, error: dErr } = await supabase
+      .from("photos")
+      .insert({
+        url: upload.url,
+        caption,
+        sort_order: currentPhotos.length,
+        album_id: selectedAlbum?.id ?? null,
+        visibility,
+        visible: visibility === "public",
+      })
+      .select("id")
+      .single();
     if (dErr) throw dErr;
+    if (selectedAlbum && insertedPhoto?.id) {
+      await savePhotoAlbumLinks(insertedPhoto.id, [selectedAlbum.id]);
+    }
   };
 
   const getCroppedBlob = (crop: Crop): Promise<Blob> =>
@@ -1039,7 +1110,7 @@ function PhotographyAdmin() {
   const deletePhoto = async (photo: PhotoRow) => {
     if (!confirm("Delete this photo?")) return;
     const fileName = photo.url.split("/").pop();
-    if (fileName) {
+    if (fileName && !isCloudinaryUrl(photo.url)) {
       const { error: sErr } = await supabase.storage
         .from("Photographs")
         .remove([fileName]);
@@ -1060,23 +1131,34 @@ function PhotographyAdmin() {
   const saveEdit = async (
     id: string,
     caption: string,
-    albumId: string | null,
+    albumIds: string[],
     visibility: "public" | "portfolio_only" | "hidden",
     homeFeatured: boolean,
+    displaySingle: boolean,
   ) => {
+    const uniqueAlbumIds = Array.from(new Set(albumIds.filter(Boolean)));
     const { error } = await supabase
       .from("photos")
       .update({
         caption,
-        album_id: albumId,
+        album_id: uniqueAlbumIds[0] ?? null,
         visibility,
         visible: visibility === "public",
         home_featured: homeFeatured,
+        display_single: displaySingle,
       })
       .eq("id", id);
     if (error) {
       console.error("saveEdit error:", error);
       showToast(`Save failed: ${error.message}`);
+      return;
+    }
+    try {
+      await savePhotoAlbumLinks(id, uniqueAlbumIds);
+    } catch (linkError) {
+      const message =
+        linkError instanceof Error ? linkError.message : String(linkError);
+      showToast(`Saved photo, but album links failed: ${message}`);
       return;
     }
     showToast("✓ Photo saved", "success");
@@ -1194,6 +1276,22 @@ function PhotographyAdmin() {
       !confirm(`Delete album "${album.title}"? Photos will become unassigned.`)
     )
       return;
+    const { error: unlinkError } = await supabase
+      .from("photos")
+      .update({ album_id: null })
+      .eq("album_id", album.id);
+    if (unlinkError) {
+      showToast(`Failed to unlink photos: ${unlinkError.message}`);
+      return;
+    }
+    const { error: linkError } = await supabase
+      .from("photo_album_links")
+      .delete()
+      .eq("album_id", album.id);
+    if (linkError) {
+      showToast(`Failed to delete album links: ${linkError.message}`);
+      return;
+    }
     const { error } = await supabase.from("albums").delete().eq("id", album.id);
     if (error) {
       showToast(`Failed to delete album: ${error.message}`);
@@ -1343,7 +1441,7 @@ function PhotographyAdmin() {
       {/* ── Albums view ── */}
       {view === "albums" && !selectedAlbum && (
         <div>
-          {(["gallery", "portfolio"] as const).map((sectionType) => {
+          {(["gallery"] as const).map((sectionType) => {
             const sectionAlbums = albums.filter(
               (a) => (a.album_type ?? "gallery") === sectionType,
             );
@@ -1367,17 +1465,17 @@ function PhotographyAdmin() {
                     >
                       {/* Cover — click to open */}
                       <div
-                        className="aspect-video bg-gray-100 overflow-hidden cursor-pointer"
+                        className="aspect-video bg-white overflow-hidden cursor-pointer border-b border-gray-100"
                         onClick={() => setSelectedAlbum(album)}
                       >
-                        {album.cover_url ? (
+	                        {album.cover_url ? (
                           <img
                             src={album.cover_url}
                             alt={album.title}
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs uppercase tracking-widest">
+                          <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-300 text-xs uppercase tracking-widest">
                             No cover
                           </div>
                         )}
@@ -1423,16 +1521,7 @@ function PhotographyAdmin() {
                         >
                           Edit
                         </button>
-                        {sectionType === "portfolio" && (
-                          <>
-                            <CopyLinkButton
-                              albumId={album.id}
-                              visible={album.visible ?? true}
-                            />
-                            <DownloadZipButton album={album} />
-                          </>
-                        )}
-                        <button
+	                        <button
                           onClick={(e) => {
                             e.stopPropagation();
                             supabase
@@ -1449,33 +1538,30 @@ function PhotographyAdmin() {
                     </div>
                   ))}
 
-                  {/* New album button (desktop only, shown once in the Portfolio section) */}
-                  {sectionType === "portfolio" && (
-                    <div
-                      onClick={() => {
-                        setNewAlbumType("gallery");
-                        setShowNewAlbum(true);
-                        scrollToNewAlbumForm();
-                      }}
-                      className="hidden md:flex border-2 border-dashed border-gray-300 hover:border-gray-500 aspect-video flex-col items-center justify-center cursor-pointer transition-colors text-gray-400 hover:text-gray-600"
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          setNewAlbumType("gallery");
-                          setShowNewAlbum(true);
-                          scrollToNewAlbumForm();
-                        }
-                      }}
-                      aria-label="Create new album"
-                      title="New album"
-                    >
-                      <span className="text-2xl mb-1">+</span>
-                      <span className="text-xs uppercase tracking-widest">
-                        New Album
-                      </span>
-                    </div>
-                  )}
+	                  <div
+	                    onClick={() => {
+	                      setNewAlbumType("gallery");
+	                      setShowNewAlbum(true);
+	                      scrollToNewAlbumForm();
+	                    }}
+	                    className="hidden md:flex border-2 border-dashed border-gray-300 hover:border-gray-500 aspect-video flex-col items-center justify-center cursor-pointer transition-colors text-gray-400 hover:text-gray-600"
+	                    role="button"
+	                    tabIndex={0}
+	                    onKeyDown={(e) => {
+	                      if (e.key === "Enter" || e.key === " ") {
+	                        setNewAlbumType("gallery");
+	                        setShowNewAlbum(true);
+	                        scrollToNewAlbumForm();
+	                      }
+	                    }}
+	                    aria-label="Create new album"
+	                    title="New album"
+	                  >
+	                    <span className="text-2xl mb-1">+</span>
+	                    <span className="text-xs uppercase tracking-widest">
+	                      New Album
+	                    </span>
+	                  </div>
                 </div>
               </div>
             );
@@ -1503,24 +1589,8 @@ function PhotographyAdmin() {
                 onChange={(e) => setNewAlbumDesc(e.target.value)}
                 className="w-full border border-gray-200 px-3 py-2 text-sm outline-none focus:border-gray-900 mb-3"
               />
-              <div className="flex gap-2 mb-3">
-                <button
-                  onClick={() => setNewAlbumType("gallery")}
-                  className={`text-xs uppercase tracking-widest px-3 py-1.5 border transition-colors ${newAlbumType === "gallery" ? "border-gray-900 text-gray-900" : "border-gray-200 text-gray-400"}`}
-                >
-                  Gallery
-                </button>
-                <button
-                  onClick={() => setNewAlbumType("portfolio")}
-                  className={`text-xs uppercase tracking-widest px-3 py-1.5 border transition-colors ${newAlbumType === "portfolio" ? "border-gray-900 text-gray-900" : "border-gray-200 text-gray-400"}`}
-                >
-                  Portfolio
-                </button>
-              </div>
               <p className="text-[10px] text-gray-400 mb-3">
-                {newAlbumType === "gallery"
-                  ? "Shown publicly on the Photography page."
-                  : "Hidden from the public site — share via link only."}
+                Shown publicly on the Photography page.
               </p>
               <div className="flex gap-2">
                 <button
@@ -1644,6 +1714,708 @@ function PhotographyAdmin() {
   );
 }
 
+function PortfolioCardPreview({ title }: { title: string }) {
+  return (
+    <div className="w-full h-full flex flex-col items-center justify-center px-5 py-4 text-center">
+      <img
+        src={`${import.meta.env.BASE_URL}logo-tight.png`}
+        alt="Vic Lentaigne"
+        className="h-5 w-auto max-w-[78%] object-contain mb-4"
+      />
+      <p className="text-[8px] uppercase tracking-widest text-gray-400 mb-2">
+        A portfolio prepared for
+      </p>
+      <p className="text-sm text-gray-900 mb-4 line-clamp-1">{title}</p>
+      <span className="border border-gray-200 px-5 py-2 text-[8px] uppercase tracking-widest text-gray-500">
+        View portfolio
+      </span>
+    </div>
+  );
+}
+
+function PortfolioAdmin({
+  onViewPageHrefChange,
+}: {
+  onViewPageHrefChange: (href: string | null) => void;
+}) {
+  const [albums, setAlbums] = useState<AlbumRow[]>([]);
+  const [selectedAlbum, setSelectedAlbum] = useState<AlbumRow | null>(null);
+  const [photos, setPhotos] = useState<PhotoRow[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const [message, setMessage] = useState("");
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [showNewAlbum, setShowNewAlbum] = useState(false);
+  const [newAlbumTitle, setNewAlbumTitle] = useState("");
+  const [newAlbumDesc, setNewAlbumDesc] = useState("");
+  const [editingAlbum, setEditingAlbum] = useState<AlbumRow | null>(null);
+  const [editingPhoto, setEditingPhoto] = useState<PhotoRow | null>(null);
+  const [toast, setToast] = useState<{
+    msg: string;
+    type: "success" | "error";
+  } | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const messageTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 180, tolerance: 8 },
+    }),
+  );
+
+  const showToast = (msg: string, type: "success" | "error" = "error") => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast({ msg, type });
+    toastTimer.current = setTimeout(
+      () => setToast(null),
+      type === "error" ? 6000 : 3000,
+    );
+  };
+
+  const setTimedMessage = (
+    msg: string,
+    type: "success" | "error" = "error",
+  ) => {
+    if (messageTimer.current) clearTimeout(messageTimer.current);
+    setMessage(msg);
+    messageTimer.current = setTimeout(
+      () => setMessage(""),
+      type === "success" ? 3000 : 6000,
+    );
+  };
+
+  const loadAlbums = async () => {
+    const { data, error } = await supabase
+      .from("albums")
+      .select("*")
+      .eq("album_type", "portfolio")
+      .order("sort_order", { ascending: true });
+    if (error) {
+      showToast(`Failed to load albums: ${error.message}`);
+      return;
+    }
+    if (data) setAlbums(data);
+  };
+
+  const loadPhotos = async (albumId: string) => {
+    try {
+      const mergedPhotos = await loadPhotosWithAlbumIds();
+      setPhotos(mergedPhotos.filter((photo) => photoBelongsToAlbum(photo, albumId)));
+    } catch (error) {
+      const messageText = error instanceof Error ? error.message : String(error);
+      showToast(`Failed to load photos: ${messageText}`);
+    }
+  };
+
+  useEffect(() => {
+    loadAlbums();
+    return () => {
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+      if (messageTimer.current) clearTimeout(messageTimer.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (selectedAlbum) loadPhotos(selectedAlbum.id);
+  }, [selectedAlbum]);
+
+  useEffect(() => {
+    const basePath =
+      import.meta.env.BASE_URL === "/" ? "/" : import.meta.env.BASE_URL;
+    onViewPageHrefChange(
+      selectedAlbum
+        ? `${basePath}photography?ref=shared&album=${selectedAlbum.id}`
+        : null,
+    );
+    return () => onViewPageHrefChange(null);
+  }, [onViewPageHrefChange, selectedAlbum]);
+
+  const handleFiles = (files: FileList | null) => {
+    if (!files?.[0]) return;
+    if (messageTimer.current) clearTimeout(messageTimer.current);
+    setMessage("");
+    setPendingFile(files[0]);
+    const reader = new FileReader();
+    reader.onload = () => setCropSrc(reader.result as string);
+    reader.readAsDataURL(files[0]);
+  };
+
+  const uploadPortfolioPhoto = async (fileOrBlob: File | Blob, caption: string) => {
+    if (!selectedAlbum) throw new Error("Choose a portfolio album first.");
+    const ext =
+      fileOrBlob instanceof File ? fileOrBlob.name.split(".").pop() : "jpg";
+    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const upload = await uploadMedia({
+      bucket: "Photographs",
+      folder: "portfolio",
+      file: fileOrBlob,
+      fileName,
+      contentType: fileOrBlob instanceof File ? fileOrBlob.type : "image/jpeg",
+      resourceType: "image",
+    });
+    const { data, error } = await supabase
+      .from("photos")
+      .insert({
+        url: upload.url,
+        caption,
+        sort_order: photos.length,
+        album_id: selectedAlbum.id,
+        visibility: "portfolio_only",
+        visible: true,
+      })
+      .select("id")
+      .single();
+    if (error) throw error;
+    if (data) await savePhotoAlbumLinks(data.id, [selectedAlbum.id]);
+  };
+
+  const getCroppedBlob = (crop: Crop): Promise<Blob> =>
+    new Promise((resolve, reject) => {
+      const img = imgRef.current;
+      if (!img || !crop) return reject("No crop");
+      const canvas = document.createElement("canvas");
+      const scaleX = img.naturalWidth / img.width;
+      const scaleY = img.naturalHeight / img.height;
+      const pw = (crop.width / 100) * img.width * scaleX;
+      const ph = (crop.height / 100) * img.height * scaleY;
+      canvas.width = pw;
+      canvas.height = ph;
+      canvas
+        .getContext("2d")!
+        .drawImage(
+          img,
+          (crop.x / 100) * img.width * scaleX,
+          (crop.y / 100) * img.height * scaleY,
+          pw,
+          ph,
+          0,
+          0,
+          pw,
+          ph,
+        );
+      canvas.toBlob(
+        (b) => (b ? resolve(b) : reject("Failed")),
+        "image/jpeg",
+        0.92,
+      );
+    });
+
+  const handleCropUpload = async (
+    crop: Crop,
+    _aspect: AspectOption,
+    caption: string,
+  ) => {
+    setUploading(true);
+    setMessage("");
+    try {
+      const blob = await getCroppedBlob(crop);
+      await uploadPortfolioPhoto(blob, caption);
+      setTimedMessage("✓ Uploaded", "success");
+      showToast("Photo uploaded", "success");
+      setCropSrc(null);
+      setPendingFile(null);
+      if (fileRef.current) fileRef.current.value = "";
+      if (selectedAlbum) loadPhotos(selectedAlbum.id);
+    } catch (error) {
+      const messageText = error instanceof Error ? error.message : String(error);
+      setTimedMessage(`Error: ${messageText}`);
+      showToast(`Upload failed: ${messageText}`);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleSkipCrop = async (caption: string) => {
+    if (!pendingFile) return;
+    setUploading(true);
+    setMessage("");
+    try {
+      await uploadPortfolioPhoto(pendingFile, caption);
+      setTimedMessage("✓ Uploaded", "success");
+      showToast("Photo uploaded", "success");
+      setCropSrc(null);
+      setPendingFile(null);
+      if (fileRef.current) fileRef.current.value = "";
+      if (selectedAlbum) loadPhotos(selectedAlbum.id);
+    } catch (error) {
+      const messageText = error instanceof Error ? error.message : String(error);
+      setTimedMessage(`Error: ${messageText}`);
+      showToast(`Upload failed: ${messageText}`);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const createPortfolio = async () => {
+    if (!newAlbumTitle.trim()) return;
+    const { error } = await supabase.from("albums").insert({
+      title: newAlbumTitle.trim(),
+      description: newAlbumDesc.trim(),
+      album_type: "portfolio",
+      visible: true,
+      sort_order: albums.length,
+    });
+    if (error) {
+      showToast(`Error: ${error.message}`);
+      return;
+    }
+    setNewAlbumTitle("");
+    setNewAlbumDesc("");
+    setShowNewAlbum(false);
+    showToast("Album created", "success");
+    loadAlbums();
+  };
+
+  const saveAlbum = async (
+    id: string,
+    title: string,
+    description: string,
+    type: "gallery" | "portfolio",
+  ) => {
+    const current = albums.find((album) => album.id === id);
+    const { error } = await supabase
+      .from("albums")
+      .update({
+        title,
+        description,
+        album_type: type,
+        visible: current?.visible ?? true,
+      })
+      .eq("id", id);
+    if (error) {
+      showToast(`Error: ${error.message}`);
+      return;
+    }
+    showToast("Saved", "success");
+    setEditingAlbum(null);
+    loadAlbums();
+    if (selectedAlbum?.id === id) {
+      setSelectedAlbum({
+        ...(selectedAlbum as AlbumRow),
+        title,
+        description,
+        album_type: type,
+      });
+    }
+  };
+
+  const deleteAlbum = async (album: AlbumRow) => {
+    if (!confirm(`Delete album "${album.title}"? Photos will stay in the library.`))
+      return;
+    await supabase
+      .from("photos")
+      .update({ album_id: null })
+      .eq("album_id", album.id);
+    await supabase.from("photo_album_links").delete().eq("album_id", album.id);
+    const { error } = await supabase.from("albums").delete().eq("id", album.id);
+    if (error) {
+      showToast(`Error: ${error.message}`);
+      return;
+    }
+    showToast("Album deleted", "success");
+    if (selectedAlbum?.id === album.id) {
+      setSelectedAlbum(null);
+      setPhotos([]);
+    }
+    loadAlbums();
+  };
+
+  const cycleVisibility = async (photo: PhotoRow) => {
+    const next =
+      photo.visibility === "public"
+        ? "portfolio_only"
+        : photo.visibility === "portfolio_only"
+          ? "hidden"
+          : "public";
+    const { error } = await supabase
+      .from("photos")
+      .update({ visibility: next, visible: next !== "hidden" })
+      .eq("id", photo.id);
+    if (error) {
+      showToast(`Failed to update: ${error.message}`);
+      return;
+    }
+    setPhotos((current) =>
+      current.map((item) =>
+        item.id === photo.id
+          ? { ...item, visibility: next, visible: next !== "hidden" }
+          : item,
+      ),
+    );
+  };
+
+  const saveEdit = async (
+    id: string,
+    caption: string,
+    albumIds: string[],
+    visibility: "public" | "portfolio_only" | "hidden",
+    homeFeatured: boolean,
+    displaySingle: boolean,
+  ) => {
+    const uniqueAlbumIds = Array.from(new Set(albumIds.filter(Boolean)));
+    const { error } = await supabase
+      .from("photos")
+      .update({
+        caption,
+        album_id: uniqueAlbumIds[0] ?? null,
+        visibility,
+        visible: visibility !== "hidden",
+        home_featured: homeFeatured,
+        display_single: displaySingle,
+      })
+      .eq("id", id);
+    if (error) {
+      showToast(`Save failed: ${error.message}`);
+      return;
+    }
+    try {
+      await savePhotoAlbumLinks(id, uniqueAlbumIds);
+    } catch (linkError) {
+      const messageText =
+        linkError instanceof Error ? linkError.message : String(linkError);
+      showToast(`Album links failed: ${messageText}`);
+      return;
+    }
+    showToast("Photo saved", "success");
+    setEditingPhoto(null);
+    if (selectedAlbum) loadPhotos(selectedAlbum.id);
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = photos.findIndex((photo) => photo.id === active.id);
+    const newIndex = photos.findIndex((photo) => photo.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove(photos, oldIndex, newIndex);
+    setPhotos(reordered);
+    await Promise.all(
+      reordered.map((photo, index) =>
+        supabase.from("photos").update({ sort_order: index }).eq("id", photo.id),
+      ),
+    );
+    showToast("Order saved", "success");
+  };
+
+  const deletePhoto = async (photo: PhotoRow) => {
+    if (!confirm("Delete this photo?")) return;
+    const { error } = await supabase.from("photos").delete().eq("id", photo.id);
+    if (error) {
+      showToast(`Failed to delete photo: ${error.message}`);
+      return;
+    }
+    setPhotos((current) => current.filter((item) => item.id !== photo.id));
+    showToast("Photo deleted", "success");
+  };
+
+  return (
+    <div className="space-y-8">
+      {toast && (
+        <div
+          className={`fixed top-4 right-4 z-50 px-4 py-3 text-sm text-white shadow-lg ${
+            toast.type === "success" ? "bg-green-600" : "bg-red-600"
+          }`}
+        >
+          {toast.msg}
+        </div>
+      )}
+
+      {cropSrc && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 50 }}>
+          <img ref={imgRef} src={cropSrc} style={{ display: "none" }} alt="" />
+          <CropModal
+            src={cropSrc}
+            onUpload={handleCropUpload}
+            onSkip={handleSkipCrop}
+            onCancel={() => {
+              setCropSrc(null);
+              setPendingFile(null);
+              if (fileRef.current) fileRef.current.value = "";
+            }}
+            uploading={uploading}
+            message={message}
+          />
+        </div>
+      )}
+
+      {editingPhoto && (
+        <EditPhotoModal
+          photo={editingPhoto}
+          albums={albums}
+          onSave={saveEdit}
+          onClose={() => setEditingPhoto(null)}
+        />
+      )}
+
+      {selectedAlbum ? (
+        <div className="space-y-6">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                setSelectedAlbum(null);
+                setPhotos([]);
+              }}
+              className="text-xs uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-colors"
+            >
+              ← Albums
+            </button>
+            <span className="text-gray-200">/</span>
+            <h2 className="text-xs uppercase tracking-widest text-gray-900">
+              {selectedAlbum.title}
+            </h2>
+          </div>
+
+          <div
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              handleFiles(e.dataTransfer.files);
+            }}
+            onClick={() => fileRef.current?.click()}
+            className={`border-2 border-dashed p-6 text-center cursor-pointer transition-colors sm:p-10 ${
+              dragOver
+                ? "border-gray-900 bg-gray-100"
+                : "border-gray-300 hover:border-gray-500"
+            }`}
+          >
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => handleFiles(e.target.files)}
+            />
+            {uploading ? (
+              <p className="text-xs uppercase tracking-widest text-gray-400 animate-pulse">
+                Uploading…
+              </p>
+            ) : (
+              <>
+                <p className="text-sm text-gray-500">Drag & drop images here</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  or click to browse — JPG, PNG, WEBP
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  Uploading into: <strong>{selectedAlbum.title}</strong>
+                </p>
+              </>
+            )}
+          </div>
+
+          {message && !cropSrc && (
+            <p
+              className={`text-xs ${
+                message.startsWith("✓") ? "text-green-600" : "text-red-500"
+              }`}
+            >
+              {message}
+            </p>
+          )}
+
+          {photos.length === 0 ? (
+            <p className="text-sm text-gray-400">
+              No photos in this album yet. Upload your first image above.
+            </p>
+          ) : (
+            <>
+              <p className="text-xs text-gray-400 uppercase tracking-widest">
+                Drag to reorder · tap edit or delete
+              </p>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={photos.map((photo) => photo.id)}
+                  strategy={rectSortingStrategy}
+                >
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {photos.map((photo) => (
+                      <SortablePhoto
+                        key={photo.id}
+                        photo={photo}
+                        onDelete={deletePhoto}
+                        onEdit={setEditingPhoto}
+                        onToggleVis={cycleVisibility}
+                        albums={albums}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            </>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs uppercase tracking-widest text-gray-500">
+              Portfolio Albums
+            </h2>
+            <button
+              onClick={() => setShowNewAlbum((current) => !current)}
+              className="text-xs uppercase tracking-widest border border-gray-300 px-3 py-1.5 hover:border-gray-900 transition-colors"
+            >
+              + New Portfolio
+            </button>
+          </div>
+
+          {showNewAlbum && (
+            <div className="border border-gray-200 p-4 space-y-3">
+              <input
+                type="text"
+                placeholder="Album title"
+                value={newAlbumTitle}
+                onChange={(e) => setNewAlbumTitle(e.target.value)}
+                className="w-full border border-gray-200 px-3 py-2 text-sm outline-none focus:border-gray-900"
+              />
+              <input
+                type="text"
+                placeholder="Description (optional)"
+                value={newAlbumDesc}
+                onChange={(e) => setNewAlbumDesc(e.target.value)}
+                className="w-full border border-gray-200 px-3 py-2 text-sm outline-none focus:border-gray-900"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={createPortfolio}
+                  className="text-xs uppercase tracking-widest bg-gray-900 text-white px-4 py-2 hover:bg-gray-700 transition-colors"
+                >
+                  Create
+                </button>
+                <button
+                  onClick={() => setShowNewAlbum(false)}
+                  className="text-xs uppercase tracking-widest border border-gray-200 px-4 py-2 hover:border-gray-900 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {albums.length === 0 && !showNewAlbum && (
+            <p className="text-sm text-gray-400">
+              No portfolio albums yet. Create one above.
+            </p>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {albums.map((album) => (
+              <div
+                key={album.id}
+                className={`relative group border bg-white transition-colors ${
+                  album.visible === false
+                    ? "border-gray-100 opacity-60"
+                    : "border-gray-200 hover:border-gray-400"
+                }`}
+              >
+                <div
+                  onClick={() => setSelectedAlbum(album)}
+                  className="aspect-video bg-white overflow-hidden cursor-pointer border-b border-gray-100"
+                >
+                  <PortfolioCardPreview title={album.title} />
+                </div>
+                {album.visible === false && (
+                  <div className="absolute top-2 left-2 bg-black/60 text-white text-[9px] uppercase tracking-widest px-1.5 py-0.5 rounded">
+                    Hidden
+                  </div>
+                )}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteAlbum(album);
+                  }}
+                  className="absolute top-2 right-2 bg-white border border-gray-200 text-xs w-8 h-8 flex items-center justify-center opacity-100 transition-opacity hover:bg-red-500 hover:text-white hover:border-red-500 z-10 sm:w-6 sm:h-6 sm:opacity-0 sm:group-hover:opacity-100"
+                  aria-label={`Delete ${album.title}`}
+                >
+                  ✕
+                </button>
+                <div
+                  className="p-3 cursor-pointer"
+                  onClick={() => setSelectedAlbum(album)}
+                >
+                  <p className="text-sm font-medium text-gray-900 truncate">
+                    {album.title}
+                  </p>
+                  {album.description && (
+                    <p className="text-xs text-gray-400 truncate">
+                      {album.description}
+                    </p>
+                  )}
+                </div>
+                <div className="px-3 pb-3 flex flex-col gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingAlbum(album);
+                      }}
+                      className="text-[9px] uppercase tracking-widest border border-gray-200 text-gray-500 px-2 py-1 hover:bg-gray-50 transition-colors"
+                    >
+                      Edit
+                    </button>
+                    <DownloadZipButton album={album} />
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        supabase
+                          .from("albums")
+                          .update({ visible: !(album.visible ?? true) })
+                          .eq("id", album.id)
+                          .then(() => loadAlbums());
+                      }}
+                      className="text-[9px] uppercase tracking-widest border border-gray-200 text-gray-500 px-2 py-1 hover:bg-gray-50 transition-colors"
+                    >
+                      {album.visible === false ? "Show" : "Hide"}
+                    </button>
+                  </div>
+                  <CopyLinkButton
+                    albumId={album.id}
+                    visible={album.visible ?? true}
+                  />
+                </div>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => setShowNewAlbum(true)}
+              className="hidden md:flex border-2 border-dashed border-gray-300 hover:border-gray-500 aspect-video flex-col items-center justify-center cursor-pointer transition-colors text-gray-400 hover:text-gray-600"
+              aria-label="Create portfolio album"
+              title="New portfolio album"
+            >
+              <span className="text-2xl mb-1">+</span>
+              <span className="text-xs uppercase tracking-widest">
+                New Portfolio
+              </span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {editingAlbum && (
+        <EditAlbumModal
+          album={editingAlbum}
+          onSave={saveAlbum}
+          onClose={() => setEditingAlbum(null)}
+        />
+      )}
+
+      {message && <p className="text-sm text-gray-500">{message}</p>}
+    </div>
+  );
+}
+
 // ─── Videos Admin ─────────────────────────────────────────────────────────────
 
 interface VideoRow {
@@ -1709,18 +2481,17 @@ function VideosAdmin() {
       const ext = file.name.split(".").pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
-      const { error: storageError } = await supabase.storage
-        .from("Videos")
-        .upload(fileName, file, { cacheControl: "3600", upsert: false });
-
-      if (storageError) throw storageError;
-
-      const { data: urlData } = supabase.storage
-        .from("Videos")
-        .getPublicUrl(fileName);
+      const upload = await uploadMedia({
+        bucket: "Videos",
+        folder: "videos",
+        file,
+        fileName,
+        contentType: file.type,
+        resourceType: "video",
+      });
 
       const { error: dbError } = await supabase.from("videos").insert({
-        url: urlData.publicUrl,
+        url: upload.url,
         title: title || file.name,
       });
 
@@ -1766,7 +2537,7 @@ function VideosAdmin() {
     const fileName = !isYouTubeUrl(video.url)
       ? video.url.split("/").pop()
       : null;
-    if (fileName) {
+    if (fileName && !isCloudinaryUrl(video.url)) {
       const { error: storageError } = await supabase.storage
         .from("Videos")
         .remove([fileName]);
@@ -2050,21 +2821,20 @@ function ShopAdmin() {
       const ext = pendingFile.name.split(".").pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
-      const { error: storageError } = await supabase.storage
-        .from("Shop")
-        .upload(fileName, pendingFile, { cacheControl: "3600", upsert: false });
-
-      if (storageError) throw storageError;
-
-      const { data: urlData } = supabase.storage
-        .from("Shop")
-        .getPublicUrl(fileName);
+      const upload = await uploadMedia({
+        bucket: "Shop",
+        folder: "shop",
+        file: pendingFile,
+        fileName,
+        contentType: pendingFile.type,
+        resourceType: "image",
+      });
 
       const { error: dbError } = await supabase.from("shop_items").insert({
         title: form.title,
         price: form.price,
         stock: form.stock,
-        image_url: urlData.publicUrl,
+        image_url: upload.url,
       });
 
       if (dbError) throw dbError;
@@ -2084,7 +2854,9 @@ function ShopAdmin() {
   const deleteItem = async (item: ShopRow) => {
     if (!confirm("Delete this item?")) return;
     const fileName = item.image_url.split("/").pop();
-    if (fileName) await supabase.storage.from("Shop").remove([fileName]);
+    if (fileName && !isCloudinaryUrl(item.image_url)) {
+      await supabase.storage.from("Shop").remove([fileName]);
+    }
     await supabase.from("shop_items").delete().eq("id", item.id);
     load();
   };
