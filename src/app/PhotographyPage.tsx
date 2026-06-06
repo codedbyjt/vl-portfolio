@@ -1,246 +1,499 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { useState, useEffect, useMemo, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { supabase } from "../lib/supabase";
+import {
+  getPhotoAlbumIds,
+  loadPhotoAlbumLinks,
+  mergePhotoAlbumIds,
+  photoBelongsToAlbum,
+} from "../lib/photoAlbums";
 
-interface AlbumRow { id: string; title: string; description: string; cover_url: string; sort_order: number; visible: boolean; album_type?: string; }
-interface PhotoRow { id: string; url: string; caption: string; sort_order: number; album_id: string | null; visible: boolean; visibility: 'public' | 'portfolio_only' | 'hidden'; }
-
-interface Lightbox {
-  photos: PhotoRow[];
-  index: number;
-  albumTitle: string;
+interface AlbumRow {
+  id: string;
+  title: string;
+  description: string;
+  cover_url: string;
+  sort_order: number;
+  visible: boolean;
+  album_type?: string;
+  show_thumbnails?: boolean;
+}
+interface PhotoRow {
+  id: string;
+  url: string;
+  caption: string;
+  sort_order: number;
+  album_id: string | null;
+  album_ids?: string[];
+  display_single?: boolean;
+  visible: boolean;
+  visibility: "public" | "portfolio_only" | "hidden";
 }
 
-const publicAsset = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\//, '')}`;
+interface CarouselSlide {
+  photos: PhotoRow[];
+}
+
+const publicAsset = (path: string) =>
+  `${import.meta.env.BASE_URL}${path.replace(/^\//, "")}`;
 
 const FALLBACK_IMAGES = [
-	'/hwa-1.webp', '/hwa-2.webp', '/hwa-3.webp', '/hwa-4.webp', '/hwa-5.webp', '/hwa-6.webp',
-	'/landing-pic-2.webp', '/PERSONAL/VicLentaigne_capetown_176 (1).jpg',
-	'/PERSONAL/VicLentaigne_capetown_24 copy (1).jpg', '/PERSONAL/greg-viclentaigne (1).jpg',
-	'/PERSONAL/immy vicy.jpg', '/PERSONAL/VicLentaigne-Tboys-Roll6 1024.jpg', '/PERSONAL/35-14-final03.jpg',
+  "/hwa-1.webp",
+  "/hwa-2.webp",
+  "/hwa-3.webp",
+  "/hwa-4.webp",
+  "/hwa-5.webp",
+  "/hwa-6.webp",
+  "/landing-pic-2.webp",
 ].map(publicAsset);
 
+// ─── Portfolio Splash ────────────────────────────────────────────────────────
+
+function PortfolioSplash({
+  clientName,
+  message,
+  onEnter,
+}: {
+  clientName: string;
+  message: string;
+  onEnter: () => void;
+}) {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setVisible(true), 60);
+    return () => clearTimeout(t);
+  }, []);
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-[200] bg-white flex flex-col items-center justify-center px-8 text-center"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: visible ? 1 : 0 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.6 }}
+    >
+      <motion.img
+        src={`${import.meta.env.BASE_URL}logo-tight.png`}
+        alt="Vic Lentaigne"
+        className="h-12 w-auto mb-12 opacity-90"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: visible ? 0.9 : 0, y: visible ? 0 : 8 }}
+        transition={{ delay: 0.3, duration: 0.6 }}
+      />
+      <motion.h1
+        className="text-4xl sm:text-5xl font-light tracking-tight text-gray-900 mb-5 leading-snug max-w-xl"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: visible ? 1 : 0, y: visible ? 0 : 12 }}
+        transition={{ delay: 0.5, duration: 0.7 }}
+      >
+        A portfolio prepared for
+        <br />
+        <span className="font-medium">{clientName}</span>
+      </motion.h1>
+      {message && (
+        <motion.p
+          className="text-base text-gray-500 max-w-md leading-relaxed mb-14"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: visible ? 1 : 0, y: visible ? 0 : 8 }}
+          transition={{ delay: 0.75, duration: 0.6 }}
+        >
+          {message}
+        </motion.p>
+      )}
+      <motion.button
+        onClick={onEnter}
+        className="text-[12px] uppercase tracking-widest border border-gray-300 text-gray-600 px-10 py-4 hover:border-gray-900 hover:text-gray-900 transition-colors"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: visible ? 1 : 0 }}
+        transition={{ delay: 1.1, duration: 0.5 }}
+      >
+        View portfolio
+      </motion.button>
+    </motion.div>
+  );
+}
+
+// ─── Album Carousel ──────────────────────────────────────────────────────────
+
+function AlbumCarousel({
+  albumTitle,
+  photos,
+  erroredIds,
+  markErrored,
+  showThumbnails,
+}: {
+  albumTitle: string;
+  photos: PhotoRow[];
+  erroredIds: Set<string>;
+  markErrored: (id: string) => void;
+  showThumbnails: boolean;
+}) {
+  const [slideIndex, setSlideIndex] = useState(0);
+  const [slideDir, setSlideDir] = useState(0);
+  const [isDesktop, setIsDesktop] = useState(false);
+  const [imageSizes, setImageSizes] = useState<
+    Record<string, { width: number; height: number }>
+  >({});
+  const dragStartX = useRef<number | null>(null);
+
+  const visible = photos.filter((p) => !erroredIds.has(p.id) && p.url);
+  const visiblePhotoKey = visible.map((p) => p.id).join("|");
+
+  useEffect(() => {
+    const media = window.matchMedia(
+      "(min-width: 1024px) and (hover: hover) and (pointer: fine)",
+    );
+    const update = () => setIsDesktop(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  const slides = useMemo<CarouselSlide[]>(() => {
+    const built: CarouselSlide[] = [];
+
+    for (let index = 0; index < visible.length; ) {
+      const photo = visible[index];
+      const size = imageSizes[photo.id];
+      const isLandscape = size ? size.width > size.height : false;
+
+      if (!isDesktop || isLandscape || photo.display_single) {
+        built.push({
+          photos: [photo],
+        });
+        index += 1;
+        continue;
+      }
+
+      const next = visible[index + 1];
+      const nextSize = next ? imageSizes[next.id] : undefined;
+      const nextIsLandscape = nextSize
+        ? nextSize.width > nextSize.height
+        : false;
+
+      built.push({
+        photos: next && !nextIsLandscape && !next.display_single ? [photo, next] : [photo],
+      });
+      index += next && !nextIsLandscape && !next.display_single ? 2 : 1;
+    }
+
+    return built;
+  }, [imageSizes, isDesktop, visible, visiblePhotoKey]);
+
+  useEffect(() => {
+    if (slideIndex >= slides.length) setSlideIndex(Math.max(slides.length - 1, 0));
+  }, [slideIndex, slides.length]);
+
+  const go = (dir: number) => {
+    const next = slideIndex + dir;
+    if (next < 0 || next >= slides.length) return;
+    setSlideDir(dir);
+    setSlideIndex(next);
+  };
+
+  const slideVariants = {
+    enter: () => ({ opacity: 0 }),
+    center: { x: 0, opacity: 1 },
+    exit: () => ({ opacity: 0 }),
+  };
+
+  if (slides.length === 0) return null;
+
+  const slide = slides[slideIndex];
+  const slidePhotoIds = new Set(slide.photos.map((p) => p.id));
+  const caption = slide.photos.map((p) => p.caption).filter(Boolean).join(" / ");
+  const imageClass =
+    slide.photos.length === 2
+      ? "block h-full w-full object-contain transition-opacity duration-300 lg:object-cover"
+      : "block h-full w-full object-contain transition-opacity duration-300";
+
+  return (
+    <div className="select-none">
+      {albumTitle && (
+        <div className="mb-2 flex items-baseline gap-3">
+          <h2 className="text-[11px] font-medium uppercase tracking-widest text-gray-900">
+            {albumTitle}
+          </h2>
+        </div>
+      )}
+      {/* Full-width slide area */}
+      <div
+        className="relative h-[70vh] overflow-hidden touch-pan-y sm:h-[82vh] lg:h-[84vh]"
+        onMouseDown={(e) => {
+          dragStartX.current = e.clientX;
+        }}
+        onMouseUp={(e) => {
+          if (dragStartX.current === null) return;
+          const delta = dragStartX.current - e.clientX;
+          dragStartX.current = null;
+          if (Math.abs(delta) > 40) go(delta > 0 ? 1 : -1);
+        }}
+        onTouchStart={(e) => {
+          dragStartX.current = e.touches[0].clientX;
+        }}
+        onTouchEnd={(e) => {
+          if (dragStartX.current === null) return;
+          const delta = dragStartX.current - e.changedTouches[0].clientX;
+          dragStartX.current = null;
+          if (Math.abs(delta) > 40) go(delta > 0 ? 1 : -1);
+        }}
+      >
+        <AnimatePresence custom={slideDir} initial={false}>
+          <motion.div
+            key={slide.photos.map((p) => p.id).join("-")}
+            custom={slideDir}
+            variants={slideVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            className={`absolute inset-0 grid gap-2 ${
+              slide.photos.length === 2 ? "grid-cols-2" : "grid-cols-1"
+            }`}
+          >
+            {slide.photos.map((photo) => (
+              <figure
+                key={photo.id}
+                className="flex h-full min-w-0 items-center justify-center overflow-hidden bg-white"
+              >
+                <div className="flex h-full w-full items-center justify-center bg-white">
+                  <img
+                    src={photo.url}
+                    alt={photo.caption}
+                    className={imageClass}
+                    onError={() => markErrored(photo.id)}
+                    onLoad={(e) => {
+                      const img = e.currentTarget;
+                      if (img.naturalWidth === 0 || img.naturalHeight === 0) {
+                        markErrored(photo.id);
+                        return;
+                      }
+                      setImageSizes((prev) => {
+                        const existing = prev[photo.id];
+                        if (
+                          existing?.width === img.naturalWidth &&
+                          existing?.height === img.naturalHeight
+                        ) {
+                          return prev;
+                        }
+                        return {
+                          ...prev,
+                          [photo.id]: {
+                            width: img.naturalWidth,
+                            height: img.naturalHeight,
+                          },
+                        };
+                      });
+                    }}
+                  />
+                </div>
+              </figure>
+            ))}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      <figcaption className="mt-1 h-4 truncate text-[10px] leading-4 text-gray-400">
+        {caption}
+      </figcaption>
+
+      {/* Counter + arrows on one line, below the image */}
+      {slides.length > 1 && (
+        <div className="mt-2 flex items-center justify-center gap-4">
+          <button
+            onClick={() => go(-1)}
+            disabled={slideIndex === 0}
+            className="w-7 h-7 flex items-center justify-center border border-gray-200 text-gray-500 hover:border-gray-900 hover:text-gray-900 transition-colors disabled:opacity-20 disabled:pointer-events-none"
+            aria-label="Previous"
+          >
+            <ChevronLeft size={13} />
+          </button>
+          <span className="text-[10px] tracking-widest text-gray-400 tabular-nums">
+            {slideIndex + 1} / {slides.length}
+          </span>
+          <button
+            onClick={() => go(1)}
+            disabled={slideIndex === slides.length - 1}
+            className="w-7 h-7 flex items-center justify-center border border-gray-200 text-gray-500 hover:border-gray-900 hover:text-gray-900 transition-colors disabled:opacity-20 disabled:pointer-events-none"
+            aria-label="Next"
+          >
+            <ChevronRight size={13} />
+          </button>
+        </div>
+      )}
+
+      {showThumbnails && visible.length > 1 && (
+        <div className="mt-5 flex gap-3 overflow-x-auto border-t border-gray-200 pt-4 pb-1">
+          {visible.map((photo) => {
+            const targetSlideIndex = slides.findIndex((candidate) =>
+              candidate.photos.some((candidatePhoto) => candidatePhoto.id === photo.id),
+            );
+            const isActive = slidePhotoIds.has(photo.id);
+
+            return (
+              <button
+                key={photo.id}
+                type="button"
+                onClick={() => {
+                  if (targetSlideIndex < 0) return;
+                  setSlideDir(targetSlideIndex > slideIndex ? 1 : -1);
+                  setSlideIndex(targetSlideIndex);
+                }}
+                className={`flex h-20 max-w-28 shrink-0 items-center justify-center overflow-hidden border bg-white p-1 transition-opacity sm:h-24 sm:max-w-36 ${
+                  isActive
+                    ? "border-gray-900 opacity-100"
+                    : "border-transparent opacity-45 hover:opacity-80"
+                }`}
+                aria-label={
+                  photo.caption ? `Show ${photo.caption}` : "Show photo"
+                }
+              >
+                <img
+                  src={photo.url}
+                  alt=""
+                  className="h-full w-auto max-w-full object-contain"
+                  loading="lazy"
+                />
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+    </div>
+  );
+}
+
+// ─── Photography Page ─────────────────────────────────────────────────────────
+
 export default function PhotographyPage() {
-	const [searchParams] = useSearchParams();
-	const [albums, setAlbums] = useState<AlbumRow[]>([]);
-	const [photos, setPhotos] = useState<PhotoRow[]>([]);
-	const [useFallback, setUseFallback] = useState(false);
-	const [lightbox, setLightbox] = useState<Lightbox | null>(null);
-	const [direction, setDirection] = useState(0);
-	const [erroredIds, setErroredIds] = useState<Set<string>>(new Set());
+  const [searchParams] = useSearchParams();
+  const [albums, setAlbums] = useState<AlbumRow[]>([]);
+  const [photos, setPhotos] = useState<PhotoRow[]>([]);
+  const [useFallback, setUseFallback] = useState(false);
+  const [erroredIds, setErroredIds] = useState<Set<string>>(new Set());
+  const [splashDismissed, setSplashDismissed] = useState(false);
 
-	const markErrored = (id: string) => setErroredIds(prev => new Set([...prev, id]));
-	const sharedAlbumId = searchParams.get('ref') === 'shared' ? searchParams.get('album') : null;
+  const markErrored = (id: string) =>
+    setErroredIds((prev) => new Set([...prev, id]));
+  const sharedAlbumId =
+    searchParams.get("ref") === "shared" ? searchParams.get("album") : null;
+  const clientName = searchParams.get("client") ?? "";
+  const clientMessage = searchParams.get("msg") ?? "";
 
-	useEffect(() => {
-		const load = async () => {
-			try {
-				const [{ data: albumData }, { data: photoData }] = await Promise.all([
-					supabase.from('albums').select('*').order('sort_order', { ascending: true }),
-					supabase.from('photos').select('*').order('sort_order', { ascending: true }),
-				]);
-				if (photoData && photoData.length > 0) {
-					setAlbums(albumData ?? []);
-					setPhotos(photoData);
-				} else {
-					setUseFallback(!sharedAlbumId);
-				}
-			} catch {
-				setUseFallback(!sharedAlbumId);
-			}
-		};
-		load();
-	}, [sharedAlbumId]);
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [{ data: albumData }, { data: photoData }, albumLinks] =
+          await Promise.all([
+            supabase
+              .from("albums")
+              .select("*")
+              .order("sort_order", { ascending: true }),
+            supabase
+              .from("photos")
+              .select("*")
+              .order("sort_order", { ascending: true }),
+            loadPhotoAlbumLinks(),
+          ]);
+        if (photoData && photoData.length > 0) {
+          setAlbums(albumData ?? []);
+          setPhotos(mergePhotoAlbumIds(photoData, albumLinks));
+        } else {
+          setUseFallback(!sharedAlbumId);
+        }
+      } catch {
+        setUseFallback(!sharedAlbumId);
+      }
+    };
+    load();
+  }, [sharedAlbumId]);
 
-	const resolveVis = (p: PhotoRow) => p.visibility ?? (p.visible ? 'public' : 'hidden');
+  const resolveVis = (p: PhotoRow) =>
+    p.visibility ?? (p.visible ? "public" : "hidden");
 
-	const sharedAlbum = sharedAlbumId ? albums.find(a => a.id === sharedAlbumId) ?? null : null;
-	const pageTitle = sharedAlbum?.album_type === 'portfolio' ? 'Portfolio' : 'Photography';
+  const sharedAlbum = sharedAlbumId
+    ? (albums.find((a) => a.id === sharedAlbumId) ?? null)
+    : null;
+  const splashName = clientName || sharedAlbum?.title || "this portfolio";
+  const showSplash = !!(sharedAlbumId && !splashDismissed);
+  const pageTitle = "Photography";
 
-	// Public page: only visible gallery albums and public photos.
-	// Shared link: only the requested visible album, including portfolio-only photos.
-	const galleryAlbums = albums.filter(a => a.visible !== false && (a.album_type ?? 'gallery') === 'gallery');
-	const publicPhotos = useFallback
-		? FALLBACK_IMAGES.map((url, i) => ({ id: String(i), url, caption: '', sort_order: i, album_id: null, visible: true, visibility: 'public' as const }))
-		: photos.filter(p => resolveVis(p) === 'public');
-	const sharedPhotos = sharedAlbum && sharedAlbum.visible !== false
-		? photos.filter(p => p.album_id === sharedAlbum.id && resolveVis(p) !== 'hidden')
-		: [];
+  // Public page: only visible gallery albums and public photos.
+  // Shared link: only the requested visible album, including portfolio-only photos.
+  const galleryAlbums = albums.filter(
+    (a) => a.visible !== false && (a.album_type ?? "gallery") === "gallery",
+  );
+  const publicPhotos = useFallback
+    ? FALLBACK_IMAGES.map((url, i) => ({
+        id: String(i),
+        url,
+        caption: "",
+        sort_order: i,
+        album_id: null,
+        album_ids: [],
+        visible: true,
+        visibility: "public" as const,
+      }))
+    : photos.filter((p) => resolveVis(p) === "public");
+  const sharedPhotos =
+    sharedAlbum && sharedAlbum.visible !== false
+      ? photos.filter(
+          (p) =>
+            photoBelongsToAlbum(p, sharedAlbum.id) &&
+            resolveVis(p) !== "hidden",
+        )
+      : [];
 
-	// Group: per gallery album, then standalone
-	const albumGroups: { album: AlbumRow | null; photos: PhotoRow[] }[] = [];
-	if (sharedAlbumId) {
-		albumGroups.push({ album: sharedAlbum, photos: sharedPhotos });
-	} else if (!useFallback) {
-		for (const album of galleryAlbums) {
-			const grouped = publicPhotos.filter(p => p.album_id === album.id);
-			if (grouped.length > 0) albumGroups.push({ album, photos: grouped });
-		}
-		const standalone = publicPhotos.filter(p => !p.album_id);
-		if (standalone.length > 0) albumGroups.push({ album: null, photos: standalone });
-	} else {
-		albumGroups.push({ album: null, photos: publicPhotos });
-	}
+  // Group by album. Only show standalone public photos when there are no albums;
+  // otherwise unassigned photos can look like they belong to the previous album.
+  const albumGroups: { album: AlbumRow | null; photos: PhotoRow[] }[] = [];
+  if (sharedAlbumId) {
+    albumGroups.push({ album: sharedAlbum, photos: sharedPhotos });
+  } else if (!useFallback) {
+    for (const album of galleryAlbums) {
+      const grouped = publicPhotos.filter((p) =>
+        photoBelongsToAlbum(p, album.id),
+      );
+      if (grouped.length > 0) albumGroups.push({ album, photos: grouped });
+    }
+    const standalone = publicPhotos.filter(
+      (p) => getPhotoAlbumIds(p).length === 0,
+    );
+    if (albumGroups.length === 0 && standalone.length > 0)
+      albumGroups.push({ album: null, photos: standalone });
+  } else {
+    albumGroups.push({ album: null, photos: publicPhotos });
+  }
 
-	const openLightbox = (groupPhotos: PhotoRow[], index: number, albumTitle: string) => {
-		setDirection(0);
-		setLightbox({ photos: groupPhotos, index, albumTitle });
-	};
+  return (
+    <div className="min-h-screen bg-white">
+      <AnimatePresence>
+        {showSplash && (
+          <PortfolioSplash
+            clientName={splashName}
+            message={clientMessage}
+            onEnter={() => setSplashDismissed(true)}
+          />
+        )}
+      </AnimatePresence>
 
-	const closeLightbox = () => setLightbox(null);
-
-	const navigate = useCallback((dir: number) => {
-		if (!lightbox) return;
-		const next = lightbox.index + dir;
-		if (next < 0 || next >= lightbox.photos.length) return;
-		setDirection(dir);
-		setLightbox(lb => lb ? { ...lb, index: next } : null);
-	}, [lightbox]);
-
-	// Keyboard nav
-	useEffect(() => {
-		if (!lightbox) return;
-		const handler = (e: KeyboardEvent) => {
-			if (e.key === 'ArrowRight') navigate(1);
-			if (e.key === 'ArrowLeft') navigate(-1);
-			if (e.key === 'Escape') closeLightbox();
-		};
-		window.addEventListener('keydown', handler);
-		return () => window.removeEventListener('keydown', handler);
-	}, [lightbox, navigate]);
-
-	const variants = {
-		enter: (dir: number) => ({ x: dir > 0 ? '100%' : '-100%', opacity: 0 }),
-		center: { x: 0, opacity: 1 },
-		exit: (dir: number) => ({ x: dir > 0 ? '-100%' : '100%', opacity: 0 }),
-	};
-
-	return (
-		<div className="min-h-screen bg-white">
-			{/* Header */}
-			<div className="px-6 pt-6 pb-4 border-b border-gray-100">
-				<h1 className="text-[13px] uppercase tracking-widest text-gray-400 font-medium">{pageTitle}</h1>
-			</div>
-
-			{/* Photo grid grouped by album */}
-			<div className="max-w-[1280px] px-4 py-4 md:px-6 md:py-5">
-				{albumGroups.map(({ album, photos: groupPhotos }) => (
-					<div key={album?.id ?? 'standalone'} className="mb-8 last:mb-0">
-						{album && (
-							<div className="flex items-baseline gap-3 mb-4">
-								<h2 className="text-[11px] uppercase tracking-widest text-gray-900 font-medium">{album.title}</h2>
-								{album.description && <span className="text-[11px] text-gray-400">{album.description}</span>}
-							</div>
-						)}
-						{(() => {
-							const visible = groupPhotos.filter(p => !erroredIds.has(p.id) && p.url);
-
-							return (
-								<div className="grid grid-cols-1 gap-x-5 gap-y-16 sm:grid-cols-2">
-									{visible.map((photo) => {
-										const idx = visible.findIndex(p => p.id === photo.id);
-										return (
-											<div key={photo.id}
-												className="cursor-pointer group"
-												onClick={() => openLightbox(visible, idx, album?.title ?? (photo.caption || 'Photo'))}>
-												<figure>
-													<div className="flex min-h-[calc(100dvh-210px)] items-start justify-center bg-white">
-														<img
-															src={photo.url}
-															alt={photo.caption}
-															className="block max-h-[calc(100dvh-210px)] max-w-full object-contain group-hover:opacity-90 transition-opacity duration-300"
-															onError={() => markErrored(photo.id)}
-															onLoad={e => {
-																const img = e.currentTarget;
-																if (img.naturalWidth === 0 || img.naturalHeight === 0) {
-																	markErrored(photo.id);
-																}
-															}}
-														/>
-													</div>
-													{photo.caption && (
-														<figcaption className="text-[10px] leading-4 text-gray-400 mt-1 truncate">{photo.caption}</figcaption>
-													)}
-												</figure>
-											</div>
-										);
-									})}
-								</div>
-							);
-						})()}
-					</div>
-				))}
-			</div>
-
-			{/* Lightbox */}
-			<AnimatePresence>
-				{lightbox && (
-					<motion.div
-						initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-						className="fixed inset-0 z-50 bg-black/95 flex flex-col"
-						onClick={closeLightbox}
-					>
-						{/* Top bar */}
-						<div className="flex items-center justify-between px-6 py-4 shrink-0" onClick={e => e.stopPropagation()}>
-							<div>
-								<p className="text-white text-[13px] tracking-wide font-medium">{lightbox.albumTitle}</p>
-								<p className="text-white/40 text-[11px] tracking-widest mt-0.5">
-									{lightbox.index + 1} / {lightbox.photos.length}
-								</p>
-							</div>
-							<button onClick={closeLightbox} className="text-white/60 hover:text-white transition-colors p-1">
-								<X size={22} />
-							</button>
-						</div>
-
-						{/* Photo */}
-						<div className="flex-1 relative overflow-hidden" onClick={e => e.stopPropagation()}>
-							<AnimatePresence custom={direction} mode="wait">
-								<motion.div
-									key={lightbox.index}
-									custom={direction}
-									variants={variants}
-									initial="enter" animate="center" exit="exit"
-									transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
-									className="absolute inset-0 flex items-center justify-center p-4"
-								>
-									<img
-										src={lightbox.photos[lightbox.index].url}
-										alt={lightbox.photos[lightbox.index].caption}
-										className="max-w-full max-h-full object-contain select-none"
-										draggable={false}
-									/>
-								</motion.div>
-							</AnimatePresence>
-
-							{/* Prev / Next */}
-							<button
-								onClick={() => navigate(-1)}
-								disabled={lightbox.index === 0}
-								className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full transition disabled:opacity-20 text-white"
-							>
-								<ChevronLeft size={20} />
-							</button>
-							<button
-								onClick={() => navigate(1)}
-								disabled={lightbox.index === lightbox.photos.length - 1}
-								className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full transition disabled:opacity-20 text-white"
-							>
-								<ChevronRight size={20} />
-							</button>
-						</div>
-
-						{/* Caption */}
-						{lightbox.photos[lightbox.index].caption && (
-							<div className="px-6 py-3 shrink-0 text-center" onClick={e => e.stopPropagation()}>
-								<p className="text-white/60 text-[12px] tracking-wide">{lightbox.photos[lightbox.index].caption}</p>
-							</div>
-						)}
-					</motion.div>
-				)}
-			</AnimatePresence>
-		</div>
-	);
+      {/* Albums as carousels */}
+      <div className="w-full px-4 pt-1 pb-4 md:px-6 md:pt-2 md:pb-5">
+        {albumGroups.map(({ album, photos: groupPhotos }) => (
+          <div key={album?.id ?? "standalone"} className="mb-12 last:mb-0">
+            <AlbumCarousel
+              photos={groupPhotos}
+              erroredIds={erroredIds}
+              markErrored={markErrored}
+              albumTitle={album?.title ?? ""}
+              showThumbnails={album?.show_thumbnails !== false}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
