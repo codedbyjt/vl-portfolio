@@ -11,10 +11,13 @@ build
 # IDE
 .vscode/*
 !.vscode/extensions.json
+!.vscode/tasks.json
+!.vscode/launch.json
 .idea
 
 # Environment files
 .env
+.env.example
 .env.local
 .env.*.local
 
