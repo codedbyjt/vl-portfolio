@@ -7,11 +7,16 @@ function shuffle<T>(arr: T[]): T[] {
   return [...arr].sort(() => Math.random() - 0.5);
 }
 
+function uniqueUrls(urls: string[]) {
+  return urls.filter((url, index, arr) => arr.indexOf(url) === index);
+}
+
 export default function LandingPage() {
   const navigate = useNavigate();
   const [imagePool, setImagePool] = useState<string[]>([]);
   const [slots, setSlots] = useState<{ src: string; key: number }[]>([]);
   const keyRef = useRef(100);
+  const queueRef = useRef<string[]>([]);
 
   useEffect(() => {
     supabase
@@ -21,12 +26,11 @@ export default function LandingPage() {
       .neq("visibility", "hidden")
       .then(({ data }) => {
         if (!data || data.length === 0) return; // nothing featured yet — show blank
-        const pool = shuffle(data.map((r: { url: string }) => r.url));
+        const pool = shuffle(uniqueUrls(data.map((r: { url: string }) => r.url)));
         setImagePool(pool);
         // Pick one unique image for the single homepage carousel.
-        const initial = pool
-          .filter((url, i, arr) => arr.indexOf(url) === i)
-          .slice(0, 1);
+        const initial = pool.slice(0, 1);
+        queueRef.current = pool.slice(1);
         setSlots(initial.map((src, i) => ({ src, key: i })));
       });
   }, []);
@@ -37,16 +41,17 @@ export default function LandingPage() {
       setSlots((prev) => {
         if (prev.length === 0) return prev;
         const slot = Math.floor(Math.random() * prev.length);
-        const currentSrcs = prev.map((s) => s.src);
-        // Prefer images not currently shown at all
-        const notShown = shuffle(
-          imagePool.filter((img) => !currentSrcs.includes(img)),
-        );
-        // Fallback: images not in this specific slot (avoids same image re-appearing in same position)
-        const notInSlot = shuffle(
-          imagePool.filter((img) => img !== prev[slot].src),
-        );
-        const newSrc = notShown[0] ?? notInSlot[0] ?? prev[slot].src;
+        const currentSrc = prev[slot].src;
+
+        if (queueRef.current.length === 0) {
+          queueRef.current = shuffle(
+            imagePool.length > 1
+              ? imagePool.filter((img) => img !== currentSrc)
+              : imagePool,
+          );
+        }
+
+        const newSrc = queueRef.current.shift() ?? currentSrc;
         keyRef.current += 1;
         return prev.map((s, i) =>
           i === slot ? { src: newSrc, key: keyRef.current } : s,
