@@ -5,7 +5,9 @@ import {
   loadPhotoAlbumLinks,
   mergePhotoAlbumIds,
   photoBelongsToAlbum,
+  savePhotoAlbumOrder,
   savePhotoAlbumLinks,
+  sortPhotosForAlbum,
 } from "../lib/photoAlbums";
 import { isCloudinaryUrl, uploadMedia } from "../lib/mediaStorage";
 import ReactCrop, {
@@ -43,6 +45,7 @@ interface PhotoRow {
   sort_order: number;
   album_id: string | null;
   album_ids?: string[];
+  album_sort_orders?: Record<string, number>;
   display_single?: boolean;
   visible: boolean;
   visibility: "public" | "portfolio_only" | "hidden";
@@ -235,14 +238,16 @@ function SortablePhoto({
   onToggleVis,
   albums,
   onViewAlbum,
+  sortable = true,
 }: {
   photo: PhotoRow;
   onDelete: (p: PhotoRow) => void;
   onEdit: (p: PhotoRow) => void;
-  onToggleHome: (p: PhotoRow) => void;
+  onToggleHome?: (p: PhotoRow) => void;
   onToggleVis: (p: PhotoRow) => void;
   albums?: AlbumRow[];
   onViewAlbum?: (albumId: string) => void;
+  sortable?: boolean;
 }) {
   const {
     attributes,
@@ -251,11 +256,14 @@ function SortablePhoto({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: photo.id });
+  } = useSortable({ id: photo.id, disabled: !sortable });
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.4 : 1,
+  };
+  const dragHandleStyle = {
+    touchAction: "none",
   };
   const [landscape, setLandscape] = useState(false);
 
@@ -283,15 +291,21 @@ function SortablePhoto({
     <div
       ref={setNodeRef}
       style={style}
-      className={`relative group bg-gray-100 cursor-grab active:cursor-grabbing ${vis === "hidden" ? "opacity-40" : ""}`}
+      className={`relative group bg-gray-100 ${vis === "hidden" ? "opacity-40" : ""}`}
     >
-      <div
-        {...attributes}
-        {...listeners}
-        className="absolute top-1 left-1 z-10 bg-white/90 rounded px-2 py-1 text-[12px] text-gray-500 select-none md:px-1 md:py-0.5 md:text-[10px]"
-      >
-        ⠿
-      </div>
+      {sortable && (
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          style={dragHandleStyle}
+          className="absolute top-1 left-1 z-10 flex h-10 w-10 cursor-grab touch-none items-center justify-center rounded bg-white/90 text-[18px] leading-none text-gray-600 shadow-sm select-none active:cursor-grabbing md:h-7 md:w-7 md:text-[14px]"
+          aria-label="Drag to reorder photo"
+          title="Drag to reorder"
+        >
+          ⠿
+        </button>
+      )}
       {/* Visibility badge — always visible, click to cycle */}
       <button
         title="Click to cycle visibility: Public → Portfolio → Hidden"
@@ -303,22 +317,24 @@ function SortablePhoto({
       >
         {visLabel}
       </button>
-      <button
-        title={
-          photo.home_featured ? "Remove from homepage" : "Feature on homepage"
-        }
-        onClick={(e) => {
-          e.stopPropagation();
-          onToggleHome(photo);
-        }}
-        className={`hidden md:block absolute bottom-10 right-1 z-10 text-[11px] px-1.5 py-0.5 rounded transition-colors select-none ${
-          photo.home_featured
-            ? "bg-amber-400 text-white"
-            : "bg-white/90 text-gray-500 opacity-0 group-hover:opacity-100"
-        }`}
-      >
-        ⌂
-      </button>
+      {onToggleHome && (
+        <button
+          title={
+            photo.home_featured ? "Remove from homepage" : "Feature on homepage"
+          }
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleHome(photo);
+          }}
+          className={`hidden md:block absolute bottom-10 right-1 z-10 text-[11px] px-1.5 py-0.5 rounded transition-colors select-none ${
+            photo.home_featured
+              ? "bg-amber-400 text-white"
+              : "bg-white/90 text-gray-500 opacity-0 group-hover:opacity-100"
+          }`}
+        >
+          ⌂
+        </button>
+      )}
       <img
         src={photo.url}
         alt={photo.caption}
@@ -353,22 +369,24 @@ function SortablePhoto({
       </div>
       <div className="flex items-center justify-end gap-2 border-t border-gray-200 bg-white px-2 py-2 md:absolute md:inset-0 md:border-0 md:bg-black/50 md:opacity-0 md:group-hover:opacity-100 md:transition-opacity md:items-end md:p-2">
         {/* Home feature toggle — mobile only, lives in the action bar */}
-        <button
-          title={
-            photo.home_featured ? "Remove from homepage" : "Feature on homepage"
-          }
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleHome(photo);
-          }}
-          className={`md:hidden text-[10px] uppercase tracking-widest px-3 py-1.5 border transition-colors mr-auto ${
-            photo.home_featured
-              ? "bg-amber-400 text-white border-amber-400"
-              : "bg-white border-gray-200 text-gray-500"
-          }`}
-        >
-          ⌂
-        </button>
+        {onToggleHome && (
+          <button
+            title={
+              photo.home_featured ? "Remove from homepage" : "Feature on homepage"
+            }
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleHome(photo);
+            }}
+            className={`md:hidden text-[10px] uppercase tracking-widest px-3 py-1.5 border transition-colors mr-auto ${
+              photo.home_featured
+                ? "bg-amber-400 text-white border-amber-400"
+                : "bg-white border-gray-200 text-gray-500"
+            }`}
+          >
+            ⌂
+          </button>
+        )}
         <button
           onClick={() => onEdit(photo)}
           className="text-[10px] uppercase tracking-widest bg-gray-900 text-white px-3 py-1.5 hover:bg-gray-700 transition-colors md:bg-white md:text-gray-900 md:px-2 md:py-1 md:hover:bg-gray-200"
@@ -842,11 +860,14 @@ function DownloadZipButton({ album }: { album: AlbumRow }) {
 
     try {
       const allPhotos = await loadPhotosWithAlbumIds();
-      const photos = allPhotos.filter(
-        (photo) =>
-          photoBelongsToAlbum(photo, album.id) &&
-          (photo.visibility ?? (photo.visible ? "public" : "hidden")) !==
-          "hidden",
+      const photos = sortPhotosForAlbum(
+        allPhotos.filter(
+          (photo) =>
+            photoBelongsToAlbum(photo, album.id) &&
+            (photo.visibility ?? (photo.visible ? "public" : "hidden")) !==
+              "hidden",
+        ),
+        album.id,
       );
       if (photos.length === 0)
         throw new Error("No downloadable photos in this portfolio.");
@@ -942,7 +963,7 @@ function PhotographyAdmin() {
       activationConstraint: { distance: 8 },
     }),
     useSensor(TouchSensor, {
-      activationConstraint: { delay: 180, tolerance: 8 },
+      activationConstraint: { delay: 120, tolerance: 8 },
     }),
   );
 
@@ -971,7 +992,12 @@ function PhotographyAdmin() {
     try {
       const mergedPhotos = await loadPhotosWithAlbumIds();
       if (albumId) {
-        setPhotos(mergedPhotos.filter((photo) => photoBelongsToAlbum(photo, albumId)));
+        setPhotos(
+          sortPhotosForAlbum(
+            mergedPhotos.filter((photo) => photoBelongsToAlbum(photo, albumId)),
+            albumId,
+          ),
+        );
       } else {
         setAllPhotos(mergedPhotos);
       }
@@ -1209,6 +1235,7 @@ function PhotographyAdmin() {
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
+    if (!selectedAlbum) return;
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     const list = selectedAlbum ? photos : allPhotos;
@@ -1217,11 +1244,19 @@ function PhotographyAdmin() {
     const newIndex = list.findIndex((p) => p.id === over.id);
     const reordered = arrayMove(list, oldIndex, newIndex);
     setter(reordered);
-    await Promise.all(
-      reordered.map((p, i) =>
-        supabase.from("photos").update({ sort_order: i }).eq("id", p.id),
-      ),
-    );
+    if (selectedAlbum) {
+      try {
+        await savePhotoAlbumOrder(
+          selectedAlbum.id,
+          reordered.map((photo) => photo.id),
+        );
+        showToast("✓ Album order saved", "success");
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        showToast(`Failed to save order: ${message}`);
+        loadPhotos(selectedAlbum.id);
+      }
+    }
   };
 
   const createAlbum = async () => {
@@ -1674,7 +1709,9 @@ function PhotographyAdmin() {
           {currentPhotos.length > 0 && (
             <>
               <p className="text-xs text-gray-400 mb-3 uppercase tracking-widest">
-                Drag to reorder · tap edit or delete
+                {view === "all"
+                  ? "Library view · order photos inside albums and portfolios"
+                  : "Drag the handle to reorder this album · tap edit or delete"}
               </p>
               <DndContext
                 sensors={sensors}
@@ -1698,6 +1735,7 @@ function PhotographyAdmin() {
                         onViewAlbum={
                           view === "all" ? handleViewAlbum : undefined
                         }
+                        sortable={!!selectedAlbum}
                       />
                     ))}
                   </div>
@@ -1764,7 +1802,7 @@ function PortfolioAdmin({
       activationConstraint: { distance: 8 },
     }),
     useSensor(TouchSensor, {
-      activationConstraint: { delay: 180, tolerance: 8 },
+      activationConstraint: { delay: 120, tolerance: 8 },
     }),
   );
 
@@ -1805,7 +1843,12 @@ function PortfolioAdmin({
   const loadPhotos = async (albumId: string) => {
     try {
       const mergedPhotos = await loadPhotosWithAlbumIds();
-      setPhotos(mergedPhotos.filter((photo) => photoBelongsToAlbum(photo, albumId)));
+      setPhotos(
+        sortPhotosForAlbum(
+          mergedPhotos.filter((photo) => photoBelongsToAlbum(photo, albumId)),
+          albumId,
+        ),
+      );
     } catch (error) {
       const messageText = error instanceof Error ? error.message : String(error);
       showToast(`Failed to load photos: ${messageText}`);
@@ -2087,6 +2130,7 @@ function PortfolioAdmin({
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
+    if (!selectedAlbum) return;
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     const oldIndex = photos.findIndex((photo) => photo.id === active.id);
@@ -2094,12 +2138,17 @@ function PortfolioAdmin({
     if (oldIndex === -1 || newIndex === -1) return;
     const reordered = arrayMove(photos, oldIndex, newIndex);
     setPhotos(reordered);
-    await Promise.all(
-      reordered.map((photo, index) =>
-        supabase.from("photos").update({ sort_order: index }).eq("id", photo.id),
-      ),
-    );
-    showToast("Order saved", "success");
+    try {
+      await savePhotoAlbumOrder(
+        selectedAlbum.id,
+        reordered.map((photo) => photo.id),
+      );
+      showToast("Order saved", "success");
+    } catch (error) {
+      const messageText = error instanceof Error ? error.message : String(error);
+      showToast(`Failed to save order: ${messageText}`);
+      loadPhotos(selectedAlbum.id);
+    }
   };
 
   const deletePhoto = async (photo: PhotoRow) => {

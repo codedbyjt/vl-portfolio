@@ -43,3 +43,4 @@ yarn-error.log*
 .github/instructions/copilot-instructions2.md
 .vscode/tasks.json
 .vscode/launch.json
+scripts/start-dev.mjs

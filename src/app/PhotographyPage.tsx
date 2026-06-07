@@ -8,6 +8,7 @@ import {
   loadPhotoAlbumLinks,
   mergePhotoAlbumIds,
   photoBelongsToAlbum,
+  sortPhotosForAlbum,
 } from "../lib/photoAlbums";
 
 interface AlbumRow {
@@ -27,6 +28,7 @@ interface PhotoRow {
   sort_order: number;
   album_id: string | null;
   album_ids?: string[];
+  album_sort_orders?: Record<string, number>;
   display_single?: boolean;
   visible: boolean;
   visibility: "public" | "portfolio_only" | "hidden";
@@ -440,10 +442,13 @@ export default function PhotographyPage() {
     : photos.filter((p) => resolveVis(p) === "public");
   const sharedPhotos =
     sharedAlbum && sharedAlbum.visible !== false
-      ? photos.filter(
-          (p) =>
-            photoBelongsToAlbum(p, sharedAlbum.id) &&
-            resolveVis(p) !== "hidden",
+      ? sortPhotosForAlbum(
+          photos.filter(
+            (p) =>
+              photoBelongsToAlbum(p, sharedAlbum.id) &&
+              resolveVis(p) !== "hidden",
+          ),
+          sharedAlbum.id,
         )
       : [];
 
@@ -454,8 +459,9 @@ export default function PhotographyPage() {
     albumGroups.push({ album: sharedAlbum, photos: sharedPhotos });
   } else if (!useFallback) {
     for (const album of galleryAlbums) {
-      const grouped = publicPhotos.filter((p) =>
-        photoBelongsToAlbum(p, album.id),
+      const grouped = sortPhotosForAlbum(
+        publicPhotos.filter((p) => photoBelongsToAlbum(p, album.id)),
+        album.id,
       );
       if (grouped.length > 0) albumGroups.push({ album, photos: grouped });
     }
