@@ -17,7 +17,6 @@ build
 
 # Environment files
 .env
-.env.example
 .env.local
 .env.*.local
 
@@ -43,4 +42,4 @@ yarn-error.log*
 .github/instructions/copilot-instructions2.md
 .vscode/tasks.json
 .vscode/launch.json
-scripts/start-dev.mjs
+README.md
