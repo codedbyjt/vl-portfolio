@@ -1,0 +1,24 @@
+{
+  "source": "cloudinary",
+  "plan": "Free",
+  "last_updated": "2026-06-06",
+  "checked_at": "2026-06-07T21:09:00Z",
+  "date_requested": "2026-06-07T00:00:00Z",
+  "storage": {
+    "usage": 199524567,
+    "credits_usage": 0.19
+  },
+  "credits": {
+    "usage": 0.25,
+    "limit": 25,
+    "used_percent": 1
+  },
+  "objects": {
+    "usage": 72
+  },
+  "resources": 72,
+  "bandwidth": {
+    "usage": 57946457,
+    "credits_usage": 0.05
+  }
+}
