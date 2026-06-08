@@ -1,0 +1,48 @@
+{
+  "source": "cloudinary",
+  "checked_at": "2026-06-08T10:10:47.472Z",
+  "plan": "Free",
+  "last_updated": "2026-06-07",
+  "date_requested": "2026-06-08T00:00:00Z",
+  "transformations": {
+    "usage": 8,
+    "credits_usage": 0.01,
+    "breakdown": {
+      "transformation": 8
+    }
+  },
+  "objects": {
+    "usage": 72
+  },
+  "bandwidth": {
+    "usage": 57946457,
+    "credits_usage": 0.05
+  },
+  "storage": {
+    "usage": 199524567,
+    "credits_usage": 0.19
+  },
+  "impressions": {
+    "usage": 26,
+    "credits_usage": 0
+  },
+  "seconds_delivered": {
+    "usage": 0,
+    "credits_usage": 0
+  },
+  "credits": {
+    "usage": 0.25,
+    "limit": 25,
+    "used_percent": 1
+  },
+  "resources": 72,
+  "derived_resources": 0,
+  "requests": 46,
+  "media_limits": {
+    "image_max_size_bytes": 10485760,
+    "video_max_size_bytes": 104857600,
+    "raw_max_size_bytes": 10485760,
+    "image_max_px": 25000000,
+    "asset_max_total_px": 50000000
+  }
+}
