@@ -5,12 +5,15 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
+    "build:custom-domain": "vite build --config vite.custom-domain.config.ts",
     "postbuild": "cp dist/index.html dist/404.html",
+    "postbuild:custom-domain": "cp dist/index.html dist/404.html",
     "dev": "node scripts/start-dev.mjs",
     "dev:tunnel": "VITE_TUNNEL_HMR=true vite --host 0.0.0.0 --port 5173 --strictPort",
     "preview": "vite preview --host 127.0.0.1 --port 4173 --strictPort",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -d dist",
+    "deploy:custom-domain": "npm run build:custom-domain && npm run postbuild:custom-domain && gh-pages -d dist"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

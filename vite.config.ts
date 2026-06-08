@@ -82,30 +82,47 @@ function mediaUsageDevPlugin(): Plugin {
   }
 }
 
-export default defineConfig(({ command }) => ({
-  base: command === 'build' ? '/vl-portfolio/' : '/',
-  plugins: [
-    // The React and Tailwind plugins are both required for Make, even if
-    // Tailwind is not being actively used – do not remove them
-    react(),
-    tailwindcss(),
-    ...(command === 'serve' ? [mediaUsageDevPlugin()] : []),
-  ],
-  resolve: {
-    alias: {
-      // Alias @ to the src directory
-      '@': '/src',
+function customDomainPlugin(domain: string): Plugin {
+  return {
+    name: 'custom-domain-cname',
+    closeBundle: async () => {
+      await mkdir('dist', { recursive: true })
+      await writeFile(path.join('dist', 'CNAME'), `${domain}\n`)
     },
-  },
-  server: {
-    allowedHosts: ['.loca.lt'],
-    ...(useTunnelHmr
-      ? {
-          hmr: {
-            protocol: 'wss',
-            clientPort: 443,
-          },
-        }
-      : {}),
-  },
-}))
+  }
+}
+
+export function createPortfolioViteConfig(buildBase: string, customDomain?: string) {
+  return defineConfig(({ command }) => ({
+    base: command === 'build' ? buildBase : '/',
+    plugins: [
+      // The React and Tailwind plugins are both required for Make, even if
+      // Tailwind is not being actively used – do not remove them
+      react(),
+      tailwindcss(),
+      ...(command === 'serve' ? [mediaUsageDevPlugin()] : []),
+      ...(command === 'build' && customDomain
+        ? [customDomainPlugin(customDomain)]
+        : []),
+    ],
+    resolve: {
+      alias: {
+        // Alias @ to the src directory
+        '@': '/src',
+      },
+    },
+    server: {
+      allowedHosts: ['.loca.lt'],
+      ...(useTunnelHmr
+        ? {
+            hmr: {
+              protocol: 'wss',
+              clientPort: 443,
+            },
+          }
+        : {}),
+    },
+  }))
+}
+
+export default createPortfolioViteConfig('/vl-portfolio/')
