@@ -78,6 +78,7 @@ interface MediaUsageSnapshot {
   plan?: string;
   last_updated?: string;
   checked_at?: string;
+  error?: string;
   credits?: {
     usage?: number;
     limit?: number;
@@ -103,22 +104,28 @@ function MediaStorageUsagePanel() {
   const [snapshotError, setSnapshotError] = useState("");
   const [loading, setLoading] = useState(true);
 
-  const loadUsage = useCallback(async () => {
+  const loadUsage = useCallback(async (refreshLive = false) => {
     setLoading(true);
     setSnapshotError("");
 
     try {
+      const usageUrl =
+        refreshLive && import.meta.env.DEV
+          ? "/api/media-usage/refresh"
+          : `${import.meta.env.BASE_URL}media-usage.json`;
       const response = await fetch(
-        `${import.meta.env.BASE_URL}media-usage.json`,
+        usageUrl,
         {
           cache: "no-store",
         },
       );
 
-      if (!response.ok) throw new Error("No usage snapshot found");
-      setSnapshot((await response.json()) as MediaUsageSnapshot);
+      const data = (await response.json()) as MediaUsageSnapshot;
+      if (!response.ok) {
+        throw new Error(data.error || "No usage snapshot found");
+      }
+      setSnapshot(data);
     } catch (error: unknown) {
-      setSnapshot(null);
       setSnapshotError(error instanceof Error ? error.message : String(error));
     } finally {
       setLoading(false);
@@ -155,7 +162,7 @@ function MediaStorageUsagePanel() {
           </p>
         </div>
         <button
-          onClick={loadUsage}
+          onClick={() => loadUsage(true)}
           disabled={loading}
           className="self-start border border-gray-200 px-3 py-2 text-xs uppercase tracking-widest text-gray-500 hover:text-gray-900 hover:border-gray-300 disabled:cursor-wait disabled:opacity-60"
         >
