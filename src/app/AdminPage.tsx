@@ -86,6 +86,18 @@ interface MediaUsageSnapshot {
   };
 }
 
+const fallbackMediaUsageSnapshot: MediaUsageSnapshot = {
+  source: "cloudinary",
+  plan: "Free",
+  last_updated: "2026-06-07",
+  checked_at: "2026-06-08T10:10:47.472Z",
+  credits: {
+    usage: 0.25,
+    limit: 25,
+    used_percent: 1,
+  },
+};
+
 function formatCheckedAt(checkedAt?: string, fallbackDate?: string) {
   const value = checkedAt ?? fallbackDate;
   if (!value) return null;
@@ -103,6 +115,7 @@ function MediaStorageUsagePanel() {
   const [snapshot, setSnapshot] = useState<MediaUsageSnapshot | null>(null);
   const [snapshotError, setSnapshotError] = useState("");
   const [loading, setLoading] = useState(true);
+  const canRefreshLiveUsage = import.meta.env.DEV;
 
   const loadUsage = useCallback(async (refreshLive = false) => {
     setLoading(true);
@@ -126,6 +139,7 @@ function MediaStorageUsagePanel() {
       }
       setSnapshot(data);
     } catch (error: unknown) {
+      setSnapshot(fallbackMediaUsageSnapshot);
       setSnapshotError(error instanceof Error ? error.message : String(error));
     } finally {
       setLoading(false);
@@ -158,7 +172,9 @@ function MediaStorageUsagePanel() {
             Media Storage
           </h2>
           <p className="mt-1 text-xs text-gray-400">
-            Current media allowance for photos, videos, and shop images.
+            {canRefreshLiveUsage
+              ? "Current media allowance for photos, videos, and shop images."
+              : "Deployed media allowance snapshot for photos, videos, and shop images."}
           </p>
         </div>
         <button
@@ -166,7 +182,11 @@ function MediaStorageUsagePanel() {
           disabled={loading}
           className="self-start border border-gray-200 px-3 py-2 text-xs uppercase tracking-widest text-gray-500 hover:text-gray-900 hover:border-gray-300 disabled:cursor-wait disabled:opacity-60"
         >
-          {loading ? "Checking…" : "Refresh"}
+          {loading
+            ? "Checking…"
+            : canRefreshLiveUsage
+              ? "Refresh"
+              : "Reload Snapshot"}
         </button>
       </div>
 
@@ -189,6 +209,12 @@ function MediaStorageUsagePanel() {
       {checkedAt && (
         <p className="mt-4 text-[11px] text-gray-400">
           Last checked {checkedAt}.
+        </p>
+      )}
+      {!canRefreshLiveUsage && (
+        <p className="mt-2 text-[11px] text-gray-400">
+          Live Cloudinary refresh runs locally, then the updated snapshot is
+          deployed.
         </p>
       )}
     </section>
