@@ -18,6 +18,9 @@ export default function ProductPage() {
   const { id } = useParams();
   const [product, setProduct] = useState<ShopItem | null>(null);
   const [loading, setLoading] = useState(true);
+  const isStripeLink =
+    product?.checkout_url?.includes("stripe.com") ||
+    product?.checkout_url?.includes("stripe.link");
 
   useEffect(() => {
     if (!id) return;
@@ -99,7 +102,7 @@ export default function ProductPage() {
                 rel="noopener noreferrer"
                 className="inline-block px-6 py-3 border border-gray-900 text-[13px] uppercase tracking-widest text-gray-900 hover:bg-gray-900 hover:text-white transition-colors duration-200"
               >
-                Buy Now
+                {isStripeLink ? "Checkout with Stripe" : "Buy Now"}
               </a>
             ) : (
               <p className="text-[13px] text-gray-400 uppercase tracking-widest">

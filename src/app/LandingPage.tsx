@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "../lib/supabase";
+import { loadSiteSettings } from "../lib/siteSettings";
 
 function shuffle<T>(arr: T[]): T[] {
   return [...arr].sort(() => Math.random() - 0.5);
@@ -13,12 +14,35 @@ function uniqueUrls(urls: string[]) {
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  const [modeChecked, setModeChecked] = useState(false);
   const [imagePool, setImagePool] = useState<string[]>([]);
   const [slots, setSlots] = useState<{ src: string; key: number }[]>([]);
   const keyRef = useRef(100);
   const queueRef = useRef<string[]>([]);
 
   useEffect(() => {
+    loadSiteSettings()
+      .then((settings) => {
+        if (settings.home_page_mode === "photography") {
+          navigate("/photography", {
+            replace: true,
+            state: { collapsePhotographyNav: true },
+          });
+          return;
+        }
+        setModeChecked(true);
+      })
+      .catch((error) => {
+        console.error("Failed to load site settings:", error);
+        navigate("/photography", {
+          replace: true,
+          state: { collapsePhotographyNav: true },
+        });
+      });
+  }, [navigate]);
+
+  useEffect(() => {
+    if (!modeChecked) return;
     supabase
       .from("photos")
       .select("url")
@@ -33,7 +57,7 @@ export default function LandingPage() {
         queueRef.current = pool.slice(1);
         setSlots(initial.map((src, i) => ({ src, key: i })));
       });
-  }, []);
+  }, [modeChecked]);
 
   useEffect(() => {
     if (imagePool.length === 0) return;
@@ -60,6 +84,10 @@ export default function LandingPage() {
     }, 2800);
     return () => clearInterval(interval);
   }, [imagePool]);
+
+  if (!modeChecked) {
+    return <div className="h-[100dvh] bg-white" />;
+  }
 
   if (slots.length === 0)
     return (

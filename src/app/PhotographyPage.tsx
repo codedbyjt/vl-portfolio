@@ -10,6 +10,7 @@ import {
   photoBelongsToAlbum,
   sortPhotosForAlbum,
 } from "../lib/photoAlbums";
+import { getDisplayImageUrl } from "../lib/mediaStorage";
 
 interface AlbumRow {
   id: string;
@@ -20,6 +21,7 @@ interface AlbumRow {
   visible: boolean;
   album_type?: string;
   show_thumbnails?: boolean;
+  show_title?: boolean;
 }
 interface PhotoRow {
   id: string;
@@ -125,12 +127,14 @@ function AlbumCarousel({
   erroredIds,
   markErrored,
   showThumbnails,
+  showTitle,
 }: {
   albumTitle: string;
   photos: PhotoRow[];
   erroredIds: Set<string>;
   markErrored: (id: string) => void;
   showThumbnails: boolean;
+  showTitle: boolean;
 }) {
   const [slideIndex, setSlideIndex] = useState(0);
   const [slideDir, setSlideDir] = useState(0);
@@ -176,7 +180,10 @@ function AlbumCarousel({
         : false;
 
       built.push({
-        photos: next && !nextIsLandscape && !next.display_single ? [photo, next] : [photo],
+        photos:
+          next && !nextIsLandscape && !next.display_single
+            ? [photo, next]
+            : [photo],
       });
       index += next && !nextIsLandscape && !next.display_single ? 2 : 1;
     }
@@ -185,7 +192,8 @@ function AlbumCarousel({
   }, [imageSizes, isDesktop, visible, visiblePhotoKey]);
 
   useEffect(() => {
-    if (slideIndex >= slides.length) setSlideIndex(Math.max(slides.length - 1, 0));
+    if (slideIndex >= slides.length)
+      setSlideIndex(Math.max(slides.length - 1, 0));
   }, [slideIndex, slides.length]);
 
   const go = (dir: number) => {
@@ -205,15 +213,16 @@ function AlbumCarousel({
 
   const slide = slides[slideIndex];
   const slidePhotoIds = new Set(slide.photos.map((p) => p.id));
-  const caption = slide.photos.map((p) => p.caption).filter(Boolean).join(" / ");
+  const caption = slide.photos
+    .map((p) => p.caption)
+    .filter(Boolean)
+    .join(" / ");
   const imageClass =
-    slide.photos.length === 2
-      ? "block h-full w-full object-contain transition-opacity duration-300 lg:object-cover"
-      : "block h-full w-full object-contain transition-opacity duration-300";
+    "block h-full w-full object-contain transition-opacity duration-300";
 
   return (
     <div className="select-none">
-      {albumTitle && (
+      {showTitle && albumTitle && (
         <div className="mb-2 flex items-baseline gap-3">
           <h2 className="text-[11px] font-medium uppercase tracking-widest text-gray-900">
             {albumTitle}
@@ -262,7 +271,7 @@ function AlbumCarousel({
               >
                 <div className="flex h-full w-full items-center justify-center bg-white">
                   <img
-                    src={photo.url}
+                    src={getDisplayImageUrl(photo.url)}
                     alt={photo.caption}
                     className={imageClass}
                     onError={() => markErrored(photo.id)}
@@ -330,7 +339,9 @@ function AlbumCarousel({
         <div className="mt-5 flex gap-3 overflow-x-auto border-t border-gray-200 pt-4 pb-1">
           {visible.map((photo) => {
             const targetSlideIndex = slides.findIndex((candidate) =>
-              candidate.photos.some((candidatePhoto) => candidatePhoto.id === photo.id),
+              candidate.photos.some(
+                (candidatePhoto) => candidatePhoto.id === photo.id,
+              ),
             );
             const isActive = slidePhotoIds.has(photo.id);
 
@@ -363,7 +374,6 @@ function AlbumCarousel({
           })}
         </div>
       )}
-
     </div>
   );
 }
@@ -496,6 +506,7 @@ export default function PhotographyPage() {
               markErrored={markErrored}
               albumTitle={album?.title ?? ""}
               showThumbnails={album?.show_thumbnails !== false}
+              showTitle={album?.show_title !== false}
             />
           </div>
         ))}

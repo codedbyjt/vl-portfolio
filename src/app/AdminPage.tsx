@@ -9,7 +9,20 @@ import {
   savePhotoAlbumLinks,
   sortPhotosForAlbum,
 } from "../lib/photoAlbums";
-import { isCloudinaryUrl, uploadMedia } from "../lib/mediaStorage";
+import {
+  getDisplayImageUrl,
+  isCloudinaryUrl,
+  uploadMedia,
+} from "../lib/mediaStorage";
+import {
+  defaultAboutContent,
+  getErrorMessage,
+  loadAboutContent,
+  sanitizeRichText,
+  saveAboutContent,
+  type AboutContent,
+} from "../lib/aboutContent";
+import { loadSiteSettings } from "../lib/siteSettings";
 import ReactCrop, {
   type Crop,
   centerCrop,
@@ -33,10 +46,33 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { CreateAlbumModal } from "./components/CreateAlbumModal";
+import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
+  Bold,
+  Check,
+  Eraser,
+  Italic,
+  Underline,
+} from "lucide-react";
+import { MediaStorageUsagePanel } from "./admin/MediaStorageUsagePanel";
+import { SiteSettingsAdmin } from "./admin/SiteSettingsAdmin";
+import { SubscribersAdmin } from "./admin/SubscribersAdmin";
+import { VideosAdmin } from "./admin/VideosAdmin";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Tab = "photography" | "portfolio" | "videos" | "shop" | "storage";
+type Tab =
+  | "photography"
+  | "portfolio"
+  | "videos"
+  | "shop"
+  | "about"
+  | "subscribers"
+  | "settings"
+  | "storage";
+type AllPhotosSort = "" | "date-added" | "home-featured" | "hidden";
 
 interface PhotoRow {
   id: string;
@@ -61,6 +97,7 @@ interface AlbumRow {
   sort_order: number;
   visible: boolean;
   album_type: "gallery" | "portfolio";
+  show_title?: boolean;
   created_at: string;
 }
 
@@ -69,156 +106,9 @@ interface ShopRow {
   title: string;
   price: string;
   stock: string;
+  checkout_url?: string;
   image_url: string;
   created_at: string;
-}
-
-interface MediaUsageSnapshot {
-  source: "cloudinary";
-  plan?: string;
-  last_updated?: string;
-  checked_at?: string;
-  error?: string;
-  credits?: {
-    usage?: number;
-    limit?: number;
-    used_percent?: number;
-  };
-}
-
-const fallbackMediaUsageSnapshot: MediaUsageSnapshot = {
-  source: "cloudinary",
-  plan: "Free",
-  last_updated: "2026-06-07",
-  checked_at: "2026-06-08T10:10:47.472Z",
-  credits: {
-    usage: 0.25,
-    limit: 25,
-    used_percent: 1,
-  },
-};
-
-function formatCheckedAt(checkedAt?: string, fallbackDate?: string) {
-  const value = checkedAt ?? fallbackDate;
-  if (!value) return null;
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-
-  return date.toLocaleString(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
-}
-
-function MediaStorageUsagePanel() {
-  const [snapshot, setSnapshot] = useState<MediaUsageSnapshot | null>(null);
-  const [snapshotError, setSnapshotError] = useState("");
-  const [loading, setLoading] = useState(true);
-  const canRefreshLiveUsage = import.meta.env.DEV;
-
-  const loadUsage = useCallback(async (refreshLive = false) => {
-    setLoading(true);
-    setSnapshotError("");
-
-    try {
-      const usageUrl =
-        refreshLive && import.meta.env.DEV
-          ? "/api/media-usage/refresh"
-          : `${import.meta.env.BASE_URL}media-usage.json`;
-      const response = await fetch(
-        usageUrl,
-        {
-          cache: "no-store",
-        },
-      );
-
-      const data = (await response.json()) as MediaUsageSnapshot;
-      if (!response.ok) {
-        throw new Error(data.error || "No usage snapshot found");
-      }
-      setSnapshot(data);
-    } catch (error: unknown) {
-      setSnapshot(fallbackMediaUsageSnapshot);
-      setSnapshotError(error instanceof Error ? error.message : String(error));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadUsage();
-  }, [loadUsage]);
-
-  const creditUsage = snapshot?.credits?.usage;
-  const creditLimit = snapshot?.credits?.limit;
-  const creditsLeft =
-    typeof creditUsage === "number" && typeof creditLimit === "number"
-      ? Math.max(creditLimit - creditUsage, 0)
-      : null;
-  const usedPercent = snapshot?.credits?.used_percent;
-  const hasCredits =
-    typeof creditUsage === "number" && typeof creditLimit === "number";
-  const checkedAt = formatCheckedAt(
-    snapshot?.checked_at,
-    snapshot?.last_updated,
-  );
-
-  return (
-    <section className="bg-white border border-gray-200 p-4 mb-6 sm:p-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h2 className="text-xs uppercase tracking-widest text-gray-900 font-medium">
-            Media Storage
-          </h2>
-          <p className="mt-1 text-xs text-gray-400">
-            {canRefreshLiveUsage
-              ? "Current media allowance for photos, videos, and shop images."
-              : "Deployed media allowance snapshot for photos, videos, and shop images."}
-          </p>
-        </div>
-        <button
-          onClick={() => loadUsage(true)}
-          disabled={loading}
-          className="self-start border border-gray-200 px-3 py-2 text-xs uppercase tracking-widest text-gray-500 hover:text-gray-900 hover:border-gray-300 disabled:cursor-wait disabled:opacity-60"
-        >
-          {loading
-            ? "Checking…"
-            : canRefreshLiveUsage
-              ? "Refresh"
-              : "Reload Snapshot"}
-        </button>
-      </div>
-
-      <div className="mt-5 border border-gray-100 p-4">
-        <p className="text-[10px] uppercase tracking-widest text-gray-400">
-          Used / Limit
-        </p>
-        <p className="mt-2 text-2xl font-medium text-gray-900">
-          {hasCredits
-            ? `${creditUsage} / ${creditLimit} credits`
-            : "Not available"}
-        </p>
-        <p className="mt-1 text-xs text-gray-400">
-          {typeof usedPercent === "number" && creditsLeft !== null
-            ? `${creditsLeft.toFixed(2)} credits left, ${usedPercent}% used`
-            : snapshotError || "Usage limit unavailable"}
-        </p>
-      </div>
-
-      {checkedAt && (
-        <p className="mt-4 text-[11px] text-gray-400">
-          Last checked {checkedAt}.
-        </p>
-      )}
-      {!canRefreshLiveUsage && (
-        <p className="mt-2 text-[11px] text-gray-400">
-          Live Cloudinary refresh runs locally, then the updated snapshot is
-          deployed.
-        </p>
-      )}
-    </section>
-  );
 }
 
 // ─── Admin Page ───────────────────────────────────────────────────────────────
@@ -229,7 +119,9 @@ export default function AdminPage() {
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState("");
   const [tab, setTab] = useState<Tab>("photography");
-  const [portfolioPageHref, setPortfolioPageHref] = useState<string | null>(null);
+  const [portfolioPageHref, setPortfolioPageHref] = useState<string | null>(
+    null,
+  );
   const pageHref =
     tab === "photography"
       ? `${import.meta.env.BASE_URL}photography`
@@ -239,7 +131,11 @@ export default function AdminPage() {
           ? `${import.meta.env.BASE_URL}film`
           : tab === "shop"
             ? `${import.meta.env.BASE_URL}shop`
-            : null;
+            : tab === "about"
+              ? `${import.meta.env.BASE_URL}about`
+              : tab === "settings"
+                ? `${import.meta.env.BASE_URL}`
+                : null;
 
   // Check existing session on mount
   useEffect(() => {
@@ -334,7 +230,18 @@ export default function AdminPage() {
 
       {/* Tabs */}
       <div className="bg-white border-b border-gray-200 px-4 flex items-center gap-5 overflow-x-auto sm:px-6 sm:gap-6">
-        {(["photography", "portfolio", "videos", "shop", "storage"] as Tab[]).map((t) => (
+        {(
+          [
+            "photography",
+            "portfolio",
+            "videos",
+            "shop",
+            "about",
+            "subscribers",
+            "settings",
+            "storage",
+          ] as Tab[]
+        ).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -355,7 +262,13 @@ export default function AdminPage() {
             className="ml-auto flex items-center gap-1.5 py-2 px-3 text-xs uppercase tracking-widest text-gray-400 hover:text-gray-900 border border-gray-200 rounded transition-colors whitespace-nowrap"
           >
             <span aria-hidden="true">↗</span>
-            View {tab === "videos" ? "film" : tab === "portfolio" ? "portfolio" : tab} page
+            View{" "}
+            {tab === "videos"
+              ? "film"
+              : tab === "portfolio"
+                ? "portfolio"
+                : tab}{" "}
+            page
           </a>
         )}
       </div>
@@ -370,6 +283,12 @@ export default function AdminPage() {
           <VideosAdmin />
         ) : tab === "shop" ? (
           <ShopAdmin />
+        ) : tab === "about" ? (
+          <AboutAdmin />
+        ) : tab === "subscribers" ? (
+          <SubscribersAdmin />
+        ) : tab === "settings" ? (
+          <SiteSettingsAdmin />
         ) : (
           <MediaStorageUsagePanel />
         )}
@@ -420,6 +339,7 @@ function SortablePhoto({
   const [landscape, setLandscape] = useState(false);
 
   const vis = photo.visibility ?? (photo.visible ? "public" : "hidden");
+  const photoSrc = getDisplayImageUrl(photo.url);
   const albumName =
     albums && photo.album_id
       ? albums.find((a) => a.id === photo.album_id)?.title
@@ -488,14 +408,14 @@ function SortablePhoto({
         </button>
       )}
       <img
-        src={photo.url}
+        src={photoSrc}
         alt={photo.caption}
         onLoad={(e) =>
           setLandscape(
             e.currentTarget.naturalWidth > e.currentTarget.naturalHeight,
           )
         }
-        className={`w-full object-cover ${landscape ? "aspect-video" : "aspect-[3/4]"}`}
+        className={`w-full bg-white object-contain ${landscape ? "aspect-video" : "aspect-[3/4]"}`}
       />
       <div className="flex items-center justify-between px-2 py-1 gap-1 min-h-[24px]">
         {photo.caption && (
@@ -524,7 +444,9 @@ function SortablePhoto({
         {onToggleHome && (
           <button
             title={
-              photo.home_featured ? "Remove from homepage" : "Feature on homepage"
+              photo.home_featured
+                ? "Remove from homepage"
+                : "Feature on homepage"
             }
             onClick={(e) => {
               e.stopPropagation();
@@ -570,6 +492,79 @@ const ASPECT_OPTIONS: {
   { label: "16:9 Landscape", value: "landscape", ratio: 16 / 9 },
 ];
 
+function createCroppedImageBlob(
+  img: HTMLImageElement | null,
+  crop: Crop | undefined,
+): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    if (!img || !crop || !crop.width || !crop.height) {
+      reject(new Error("Choose a crop area first."));
+      return;
+    }
+
+    const canvas = document.createElement("canvas");
+    const renderedWidth = img.width || img.naturalWidth;
+    const renderedHeight = img.height || img.naturalHeight;
+    const scaleX = img.naturalWidth / renderedWidth;
+    const scaleY = img.naturalHeight / renderedHeight;
+    const sourceX = (crop.x / 100) * renderedWidth * scaleX;
+    const sourceY = (crop.y / 100) * renderedHeight * scaleY;
+    const sourceWidth = (crop.width / 100) * renderedWidth * scaleX;
+    const sourceHeight = (crop.height / 100) * renderedHeight * scaleY;
+
+    canvas.width = Math.round(sourceWidth);
+    canvas.height = Math.round(sourceHeight);
+    canvas
+      .getContext("2d")!
+      .drawImage(
+        img,
+        sourceX,
+        sourceY,
+        sourceWidth,
+        sourceHeight,
+        0,
+        0,
+        canvas.width,
+        canvas.height,
+      );
+    canvas.toBlob(
+      (blob) =>
+        blob
+          ? resolve(blob)
+          : reject(new Error("Could not create cropped image.")),
+      "image/jpeg",
+      0.92,
+    );
+  });
+}
+
+function sortAllPhotos(
+  photos: PhotoRow[],
+  _albums: AlbumRow[],
+  sort: AllPhotosSort,
+) {
+  if (sort === "home-featured") {
+    return photos.filter((photo) => photo.home_featured);
+  }
+
+  if (sort === "date-added") {
+    return [...photos].sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    );
+  }
+
+  if (sort === "hidden") {
+    return photos.filter(
+      (photo) =>
+        (photo.visibility ?? (photo.visible ? "public" : "hidden")) ===
+        "hidden",
+    );
+  }
+
+  return photos;
+}
+
 function CropModal({
   src,
   onUpload,
@@ -579,7 +574,12 @@ function CropModal({
   message,
 }: {
   src: string;
-  onUpload: (crop: Crop, aspectMode: AspectOption, caption: string) => void;
+  onUpload: (
+    crop: Crop,
+    aspectMode: AspectOption,
+    caption: string,
+    image: HTMLImageElement | null,
+  ) => void;
   onSkip: (caption: string) => void;
   onCancel: () => void;
   uploading: boolean;
@@ -608,7 +608,9 @@ function CropModal({
 
   return (
     <div className="fixed inset-0 bg-black/85 z-50 flex flex-col items-center justify-center p-6 gap-4 overflow-auto">
-      <p className="text-white text-xs uppercase tracking-widest">Crop Image</p>
+      <p className="text-white text-xs uppercase tracking-widest">
+        Preview Image
+      </p>
       <div className="flex gap-2 flex-wrap justify-center">
         {ASPECT_OPTIONS.map((opt) => (
           <button
@@ -646,16 +648,18 @@ function CropModal({
         <button
           onClick={() => onSkip(caption)}
           disabled={uploading}
-          className="text-xs uppercase tracking-widest border border-white/40 text-white px-5 py-2 hover:border-white disabled:opacity-50"
-        >
-          Upload as-is
-        </button>
-        <button
-          onClick={() => crop && onUpload(crop, aspectMode, caption)}
-          disabled={uploading || !crop}
           className="text-xs uppercase tracking-widest bg-white text-gray-900 px-5 py-2 hover:bg-gray-200 disabled:opacity-50"
         >
-          {uploading ? "Uploading…" : "Apply Crop & Upload"}
+          {uploading ? "Uploading..." : "Upload Original"}
+        </button>
+        <button
+          onClick={() =>
+            crop && onUpload(crop, aspectMode, caption, imgRef.current)
+          }
+          disabled={uploading || !crop}
+          className="text-xs uppercase tracking-widest border border-white/40 text-white px-5 py-2 hover:border-white disabled:opacity-50"
+        >
+          Apply Crop & Upload
         </button>
         <button
           onClick={onCancel}
@@ -681,6 +685,8 @@ function EditPhotoModal({
   photo,
   albums,
   onSave,
+  onReplaceImage,
+  showHomeFeature = false,
   onClose,
 }: {
   photo: PhotoRow;
@@ -693,6 +699,8 @@ function EditPhotoModal({
     homeFeatured: boolean,
     displaySingle: boolean,
   ) => void;
+  onReplaceImage: (photo: PhotoRow, blob: Blob) => Promise<void>;
+  showHomeFeature?: boolean;
   onClose: () => void;
 }) {
   const [caption, setCaption] = useState(photo.caption);
@@ -704,6 +712,13 @@ function EditPhotoModal({
   >(photo.visibility ?? (photo.visible ? "public" : "hidden"));
   const [homeFeatured, setHomeFeatured] = useState(!!photo.home_featured);
   const [displaySingle, setDisplaySingle] = useState(!!photo.display_single);
+  const [cropOpen, setCropOpen] = useState(false);
+  const [crop, setCrop] = useState<Crop>();
+  const [aspectMode, setAspectMode] = useState<AspectOption>("free");
+  const [replaceMessage, setReplaceMessage] = useState("");
+  const [replaceUploading, setReplaceUploading] = useState(false);
+  const cropImgRef = useRef<HTMLImageElement>(null);
+  const photoSrc = getDisplayImageUrl(photo.url);
 
   // Load existing multi-album links on open
   useEffect(() => {
@@ -720,13 +735,49 @@ function EditPhotoModal({
       prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id],
     );
 
+  const applyCropAspect = (mode: AspectOption) => {
+    setAspectMode(mode);
+    if (!cropImgRef.current) return;
+    const { width, height } = cropImgRef.current;
+    const ratio = ASPECT_OPTIONS.find((a) => a.value === mode)?.ratio;
+    setCrop(
+      ratio
+        ? centerCrop(
+            makeAspectCrop({ unit: "%", width: 90 }, ratio, width, height),
+            width,
+            height,
+          )
+        : { unit: "%", x: 0, y: 0, width: 100, height: 100 },
+    );
+  };
+
+  const replaceImageWithCrop = async () => {
+    setReplaceUploading(true);
+    setReplaceMessage("");
+    try {
+      const blob = await createCroppedImageBlob(cropImgRef.current, crop);
+      await onReplaceImage(photo, blob);
+      setReplaceMessage("✓ Crop saved");
+      setCropOpen(false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setReplaceMessage(`Crop failed: ${message}`);
+    } finally {
+      setReplaceUploading(false);
+    }
+  };
+
   const visOptions: {
     value: "public" | "portfolio_only" | "hidden";
     label: string;
     desc: string;
   }[] = [
     { value: "public", label: "Public", desc: "Visible everywhere" },
-    { value: "portfolio_only", label: "Portfolio only", desc: "Only via shared link" },
+    {
+      value: "portfolio_only",
+      label: "Portfolio only",
+      desc: "Only via shared link",
+    },
     { value: "hidden", label: "Hidden", desc: "Not shown anywhere" },
   ];
 
@@ -735,12 +786,104 @@ function EditPhotoModal({
       <div className="my-4 bg-white w-full max-w-md max-h-[calc(100dvh-2rem)] flex min-h-0 flex-col overflow-hidden">
         {/* Sticky header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
-          <h3 className="text-xs uppercase tracking-widest text-gray-400">Edit Photo</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-900 text-lg leading-none">×</button>
+          <h3 className="text-xs uppercase tracking-widest text-gray-400">
+            Edit Photo
+          </h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-900 text-lg leading-none"
+          >
+            ×
+          </button>
         </div>
         {/* Scrollable body */}
         <div className="min-h-0 overflow-y-auto px-5 pb-5 flex flex-col gap-4">
-          <img src={photo.url} alt="" className="w-full max-h-48 object-contain bg-gray-50" />
+          {cropOpen ? (
+            <div className="border border-gray-200 p-3">
+              <div className="mb-3 flex flex-wrap gap-2">
+                {ASPECT_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => applyCropAspect(opt.value)}
+                    disabled={replaceUploading}
+                    className={`text-[10px] px-3 py-1 border uppercase tracking-widest transition-colors ${
+                      aspectMode === opt.value
+                        ? "border-gray-900 bg-gray-900 text-white"
+                        : "border-gray-200 text-gray-500 hover:border-gray-400"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <ReactCrop
+                crop={crop}
+                onChange={(nextCrop) => setCrop(nextCrop)}
+                aspect={
+                  ASPECT_OPTIONS.find((a) => a.value === aspectMode)?.ratio
+                }
+              >
+                <img
+                  ref={cropImgRef}
+                  src={photoSrc}
+                  crossOrigin="anonymous"
+                  onLoad={() => applyCropAspect(aspectMode)}
+                  alt=""
+                  className="w-full max-h-64 object-contain bg-gray-50"
+                />
+              </ReactCrop>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  onClick={replaceImageWithCrop}
+                  disabled={replaceUploading || !crop}
+                  className="bg-gray-900 text-white text-xs uppercase tracking-widest px-4 py-2 hover:bg-gray-700 disabled:opacity-50"
+                >
+                  {replaceUploading ? "Saving…" : "Save Crop"}
+                </button>
+                <button
+                  onClick={() => {
+                    setCropOpen(false);
+                    setReplaceMessage("");
+                  }}
+                  disabled={replaceUploading}
+                  className="text-xs uppercase tracking-widest text-gray-400 hover:text-gray-900 px-3 py-2"
+                >
+                  Cancel Crop
+                </button>
+              </div>
+              {replaceMessage && (
+                <p
+                  className={`mt-2 text-xs ${replaceMessage.startsWith("✓") ? "text-green-600" : "text-red-600"}`}
+                >
+                  {replaceMessage}
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="border border-gray-100 bg-gray-50 p-2">
+              <img
+                src={photoSrc}
+                alt=""
+                className="w-full max-h-48 object-contain"
+              />
+              <button
+                onClick={() => {
+                  setCropOpen(true);
+                  setReplaceMessage("");
+                }}
+                className="mt-2 w-full border border-gray-200 bg-white px-4 py-2 text-xs uppercase tracking-widest text-gray-600 hover:border-gray-900 hover:text-gray-900"
+              >
+                Adjust Crop
+              </button>
+              {replaceMessage && (
+                <p
+                  className={`mt-2 text-xs ${replaceMessage.startsWith("✓") ? "text-green-600" : "text-red-600"}`}
+                >
+                  {replaceMessage}
+                </p>
+              )}
+            </div>
+          )}
           <input
             type="text"
             placeholder="Caption"
@@ -750,10 +893,15 @@ function EditPhotoModal({
           />
           {/* Multi-select album checkboxes */}
           <div className="border border-gray-200 p-3">
-            <p className="text-[10px] uppercase tracking-widest text-gray-400 mb-2">Albums</p>
+            <p className="text-[10px] uppercase tracking-widest text-gray-400 mb-2">
+              Albums
+            </p>
             <div className="flex flex-col gap-2">
               {albums.map((a) => (
-                <label key={a.id} className="flex items-center gap-3 cursor-pointer">
+                <label
+                  key={a.id}
+                  className="flex items-center gap-3 cursor-pointer"
+                >
                   <input
                     type="checkbox"
                     checked={albumIds.includes(a.id)}
@@ -761,7 +909,9 @@ function EditPhotoModal({
                     className="w-4 h-4 accent-gray-900"
                   />
                   <div>
-                    <p className="text-sm text-gray-900 leading-none">{a.title}</p>
+                    <p className="text-sm text-gray-900 leading-none">
+                      {a.title}
+                    </p>
                     <p className="text-[10px] uppercase tracking-widest text-gray-400 mt-0.5">
                       {a.album_type ?? "gallery"}
                     </p>
@@ -769,10 +919,14 @@ function EditPhotoModal({
                 </label>
               ))}
             </div>
-            <p className="text-[10px] text-gray-400 mt-2">Leave all unchecked to keep this photo standalone.</p>
+            <p className="text-[10px] text-gray-400 mt-2">
+              Leave all unchecked to keep this photo standalone.
+            </p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-widest text-gray-400 mb-2">Visibility</p>
+            <p className="text-xs uppercase tracking-widest text-gray-400 mb-2">
+              Visibility
+            </p>
             <div className="flex gap-2">
               {visOptions.map((opt) => (
                 <button
@@ -784,7 +938,9 @@ function EditPhotoModal({
                       : "border-gray-200 text-gray-400 hover:text-gray-700"
                   }`}
                 >
-                  <div className="uppercase tracking-widest font-medium">{opt.label}</div>
+                  <div className="uppercase tracking-widest font-medium">
+                    {opt.label}
+                  </div>
                 </button>
               ))}
             </div>
@@ -792,37 +948,60 @@ function EditPhotoModal({
               {visOptions.find((o) => o.value === visibility)?.desc}
             </p>
           </div>
-          <div>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <div
-                onClick={() => setHomeFeatured((v) => !v)}
-                className={`w-9 h-5 rounded-full transition-colors flex items-center px-0.5 ${homeFeatured ? "bg-amber-400" : "bg-gray-200"}`}
-              >
-                <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${homeFeatured ? "translate-x-4" : "translate-x-0"}`} />
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-widest text-gray-700 leading-none">Feature on homepage</p>
-                <p className="text-[10px] text-gray-400 mt-0.5">Shown in the rotating homepage grid</p>
-              </div>
-            </label>
-          </div>
+          {showHomeFeature && (
+            <div>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <div
+                  onClick={() => setHomeFeatured((v) => !v)}
+                  className={`w-9 h-5 rounded-full transition-colors flex items-center px-0.5 ${homeFeatured ? "bg-amber-400" : "bg-gray-200"}`}
+                >
+                  <div
+                    className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${homeFeatured ? "translate-x-4" : "translate-x-0"}`}
+                  />
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-widest text-gray-700 leading-none">
+                    Feature on homepage
+                  </p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">
+                    Shown in the rotating homepage grid
+                  </p>
+                </div>
+              </label>
+            </div>
+          )}
           <div>
             <label className="flex items-center gap-3 cursor-pointer">
               <div
                 onClick={() => setDisplaySingle((v) => !v)}
                 className={`w-9 h-5 rounded-full transition-colors flex items-center px-0.5 ${displaySingle ? "bg-gray-900" : "bg-gray-200"}`}
               >
-                <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${displaySingle ? "translate-x-4" : "translate-x-0"}`} />
+                <div
+                  className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${displaySingle ? "translate-x-4" : "translate-x-0"}`}
+                />
               </div>
               <div>
-                <p className="text-xs uppercase tracking-widest text-gray-700 leading-none">Display as single</p>
-                <p className="text-[10px] text-gray-400 mt-0.5">Stops this portrait photo pairing with another portrait</p>
+                <p className="text-xs uppercase tracking-widest text-gray-700 leading-none">
+                  Display as single
+                </p>
+                <p className="text-[10px] text-gray-400 mt-0.5">
+                  Stops this portrait photo pairing with another portrait
+                </p>
               </div>
             </label>
           </div>
           <div className="sticky bottom-0 -mx-5 mt-2 flex gap-3 border-t border-gray-100 bg-white px-5 py-4">
             <button
-              onClick={() => onSave(photo.id, caption, albumIds, visibility, homeFeatured, displaySingle)}
+              onClick={() =>
+                onSave(
+                  photo.id,
+                  caption,
+                  albumIds,
+                  visibility,
+                  homeFeatured,
+                  displaySingle,
+                )
+              }
               className="bg-gray-900 text-white text-xs uppercase tracking-widest px-5 py-2 hover:bg-gray-700"
             >
               Save
@@ -853,6 +1032,7 @@ function EditAlbumModal({
     title: string,
     description: string,
     type: "gallery" | "portfolio",
+    showTitle: boolean,
   ) => void;
   onClose: () => void;
 }) {
@@ -861,6 +1041,7 @@ function EditAlbumModal({
   const [albumType, setAlbumType] = useState<"gallery" | "portfolio">(
     album.album_type ?? "gallery",
   );
+  const [showTitle, setShowTitle] = useState(album.show_title !== false);
 
   return (
     <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-6">
@@ -906,9 +1087,27 @@ function EditAlbumModal({
               : "Hidden from the public site — share via link only."}
           </p>
         </div>
+        <label className="mb-5 flex items-start gap-3 border border-gray-200 p-3 cursor-pointer hover:border-gray-400 transition-colors">
+          <input
+            type="checkbox"
+            checked={showTitle}
+            onChange={(e) => setShowTitle(e.target.checked)}
+            className="mt-0.5"
+          />
+          <span>
+            <span className="block text-xs uppercase tracking-widest text-gray-700">
+              Show album name
+            </span>
+            <span className="block text-[10px] text-gray-400 mt-1">
+              Controls the title shown above this gallery carousel.
+            </span>
+          </span>
+        </label>
         <div className="flex gap-3">
           <button
-            onClick={() => onSave(album.id, title, description, albumType)}
+            onClick={() =>
+              onSave(album.id, title, description, albumType, showTitle)
+            }
             className="bg-gray-900 text-white text-xs uppercase tracking-widest px-5 py-2 hover:bg-gray-700"
           >
             Save
@@ -995,7 +1194,10 @@ function getFileExtension(url: string, contentType: string | null) {
 
 async function loadPhotosWithAlbumIds() {
   const [{ data, error }, links] = await Promise.all([
-    supabase.from("photos").select("*").order("sort_order", { ascending: true }),
+    supabase
+      .from("photos")
+      .select("*")
+      .order("sort_order", { ascending: true }),
     loadPhotoAlbumLinks(),
   ]);
 
@@ -1084,6 +1286,8 @@ function DownloadZipButton({ album }: { album: AlbumRow }) {
 
 function PhotographyAdmin() {
   const [view, setView] = useState<"albums" | "all">("albums");
+  const [allPhotosSort, setAllPhotosSort] = useState<AllPhotosSort>("");
+  const [homeFeatureEnabled, setHomeFeatureEnabled] = useState(false);
   const [albums, setAlbums] = useState<AlbumRow[]>([]);
   const [selectedAlbum, setSelectedAlbum] = useState<AlbumRow | null>(null);
   const [photos, setPhotos] = useState<PhotoRow[]>([]);
@@ -1107,7 +1311,6 @@ function PhotographyAdmin() {
     type: "success" | "error";
   } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const imgRef = useRef<HTMLImageElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const newAlbumFormRef = useRef<HTMLDivElement | null>(null);
   const sensors = useSensors(
@@ -1163,20 +1366,46 @@ function PhotographyAdmin() {
   useEffect(() => {
     loadAlbums();
     loadPhotos();
+    loadSiteSettings()
+      .then((settings) =>
+        setHomeFeatureEnabled(settings.home_page_mode === "landing"),
+      )
+      .catch((error) => {
+        console.error("Failed to load homepage setting:", error);
+        setHomeFeatureEnabled(false);
+      });
   }, []);
   useEffect(() => {
     if (selectedAlbum) loadPhotos(selectedAlbum.id);
   }, [selectedAlbum]);
+  useEffect(() => {
+    if (!homeFeatureEnabled && allPhotosSort === "home-featured") {
+      setAllPhotosSort("");
+    }
+  }, [allPhotosSort, homeFeatureEnabled]);
 
   const handleFiles = (files: FileList | null) => {
-    if (!files?.[0]) return;
-    setPendingFile(files[0]);
+    const imageFiles = Array.from(files ?? []).filter((file) =>
+      file.type.startsWith("image/"),
+    );
+    if (imageFiles.length === 0) return;
+
+    if (imageFiles.length > 1) {
+      uploadFilesBatch(imageFiles);
+      return;
+    }
+
+    setPendingFile(imageFiles[0]);
     const reader = new FileReader();
     reader.onload = () => setCropSrc(reader.result as string);
-    reader.readAsDataURL(files[0]);
+    reader.readAsDataURL(imageFiles[0]);
   };
 
-  const doUpload = async (fileOrBlob: File | Blob, caption: string) => {
+  const doUpload = async (
+    fileOrBlob: File | Blob,
+    caption: string,
+    sortOrder?: number,
+  ) => {
     const ext =
       fileOrBlob instanceof File ? fileOrBlob.name.split(".").pop() : "jpg";
     const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
@@ -1197,7 +1426,7 @@ function PhotographyAdmin() {
       .insert({
         url: upload.url,
         caption,
-        sort_order: currentPhotos.length,
+        sort_order: sortOrder ?? currentPhotos.length,
         album_id: selectedAlbum?.id ?? null,
         visibility,
         visible: visibility === "public",
@@ -1210,46 +1439,65 @@ function PhotographyAdmin() {
     }
   };
 
-  const getCroppedBlob = (crop: Crop): Promise<Blob> =>
-    new Promise((resolve, reject) => {
-      const img = imgRef.current;
-      if (!img || !crop) return reject("No crop");
-      const canvas = document.createElement("canvas");
-      const scaleX = img.naturalWidth / img.width;
-      const scaleY = img.naturalHeight / img.height;
-      const pw = (crop.width / 100) * img.width * scaleX;
-      const ph = (crop.height / 100) * img.height * scaleY;
-      canvas.width = pw;
-      canvas.height = ph;
-      canvas
-        .getContext("2d")!
-        .drawImage(
-          img,
-          (crop.x / 100) * img.width * scaleX,
-          (crop.y / 100) * img.height * scaleY,
-          pw,
-          ph,
-          0,
-          0,
-          pw,
-          ph,
-        );
-      canvas.toBlob(
-        (b) => (b ? resolve(b) : reject("Failed")),
-        "image/jpeg",
-        0.92,
-      );
+  const uploadFilesBatch = async (files: File[]) => {
+    setUploading(true);
+    setMessage("");
+    try {
+      const currentPhotos = selectedAlbum ? photos : allPhotos;
+      for (const [index, file] of files.entries()) {
+        await doUpload(file, "", currentPhotos.length + index);
+      }
+      setMessage(`✓ Uploaded ${files.length} photos`);
+      showToast(`✓ Uploaded ${files.length} photos`, "success");
+      if (fileRef.current) fileRef.current.value = "";
+      selectedAlbum ? loadPhotos(selectedAlbum.id) : loadPhotos();
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      setMessage(`Error: ${msg}`);
+      showToast(`Batch upload failed: ${msg}`);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const replacePhotoImage = async (photo: PhotoRow, blob: Blob) => {
+    const folder =
+      selectedAlbum?.album_type === "portfolio" ||
+      photo.visibility === "portfolio_only"
+        ? "portfolio"
+        : "photographs";
+    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
+    const upload = await uploadMedia({
+      bucket: "Photographs",
+      folder,
+      file: blob,
+      fileName,
+      contentType: "image/jpeg",
+      resourceType: "image",
     });
+    const { error } = await supabase
+      .from("photos")
+      .update({ url: upload.url })
+      .eq("id", photo.id);
+    if (error) throw error;
+
+    setEditingPhoto((current) =>
+      current?.id === photo.id ? { ...current, url: upload.url } : current,
+    );
+    showToast("✓ Crop saved", "success");
+    selectedAlbum ? loadPhotos(selectedAlbum.id) : loadPhotos();
+  };
 
   const handleCropUpload = async (
     crop: Crop,
     _aspect: AspectOption,
     caption: string,
+    image: HTMLImageElement | null,
   ) => {
     setUploading(true);
     setMessage("");
     try {
-      const blob = await getCroppedBlob(crop);
+      const blob = await createCroppedImageBlob(image, crop);
       await doUpload(blob, caption);
       setMessage("✓ Uploaded");
       showToast("✓ Photo uploaded", "success");
@@ -1440,6 +1688,7 @@ function PhotographyAdmin() {
     title: string,
     description: string,
     type: "gallery" | "portfolio",
+    showTitle: boolean,
   ) => {
     if (!title.trim()) {
       showToast("Album title is required");
@@ -1447,7 +1696,7 @@ function PhotographyAdmin() {
     }
     const { error } = await supabase
       .from("albums")
-      .update({ title, description, album_type: type })
+      .update({ title, description, album_type: type, show_title: showTitle })
       .eq("id", id);
     if (error) {
       showToast(`Failed to save album: ${error.message}`);
@@ -1498,6 +1747,10 @@ function PhotographyAdmin() {
   };
 
   const currentPhotos = selectedAlbum ? photos : allPhotos;
+  const displayedPhotos =
+    view === "all"
+      ? sortAllPhotos(currentPhotos, albums, allPhotosSort)
+      : currentPhotos;
 
   const scrollToNewAlbumForm = useCallback(() => {
     // Wait a tick so the form exists in the DOM after state updates.
@@ -1564,7 +1817,6 @@ function PhotographyAdmin() {
       {/* Crop modal */}
       {cropSrc && (
         <div style={{ position: "fixed", inset: 0, zIndex: 50 }}>
-          <img ref={imgRef} src={cropSrc} style={{ display: "none" }} alt="" />
           <CropModal
             src={cropSrc}
             onUpload={handleCropUpload}
@@ -1594,6 +1846,8 @@ function PhotographyAdmin() {
           photo={editingPhoto}
           albums={albums}
           onSave={saveEdit}
+          onReplaceImage={replacePhotoImage}
+          showHomeFeature={homeFeatureEnabled}
           onClose={() => setEditingPhoto(null)}
         />
       )}
@@ -1645,110 +1899,121 @@ function PhotographyAdmin() {
                   </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {sectionAlbums.map((album) => (
-                    <div
-                      key={album.id}
-                      className={`relative group border bg-white transition-colors ${album.visible === false ? "border-gray-100 opacity-60" : "border-gray-200 hover:border-gray-400"}`}
-                    >
-                      {/* Cover — click to open */}
+                  {sectionAlbums.map((album) => {
+                    const albumPhotoCount = allPhotos.filter((photo) =>
+                      photoBelongsToAlbum(photo, album.id),
+                    ).length;
+
+                    return (
                       <div
-                        className="aspect-video bg-white overflow-hidden cursor-pointer border-b border-gray-100"
-                        onClick={() => setSelectedAlbum(album)}
+                        key={album.id}
+                        className={`relative group border bg-white transition-colors ${album.visible === false ? "border-gray-100 opacity-60" : "border-gray-200 hover:border-gray-400"}`}
                       >
-	                        {album.cover_url ? (
-                          <img
-                            src={album.cover_url}
-                            alt={album.title}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-300 text-xs uppercase tracking-widest">
-                            No cover
+                        {/* Cover — click to open */}
+                        <div
+                          className="aspect-video bg-white overflow-hidden cursor-pointer border-b border-gray-100"
+                          onClick={() => setSelectedAlbum(album)}
+                        >
+                          {album.cover_url ? (
+                            <img
+                              src={album.cover_url}
+                              alt={album.title}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100 text-gray-500">
+                              <span className="text-4xl font-semibold tracking-tight text-gray-800">
+                                {albumPhotoCount}
+                              </span>
+                              <span className="mt-2 text-xs uppercase tracking-widest text-gray-400">
+                                {albumPhotoCount === 1 ? "Image" : "Images"}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        {/* Hidden badge */}
+                        {album.visible === false && (
+                          <div className="absolute top-2 left-2 bg-black/60 text-white text-[9px] uppercase tracking-widest px-1.5 py-0.5 rounded">
+                            Hidden
                           </div>
                         )}
-                      </div>
-                      {/* Hidden badge */}
-                      {album.visible === false && (
-                        <div className="absolute top-2 left-2 bg-black/60 text-white text-[9px] uppercase tracking-widest px-1.5 py-0.5 rounded">
-                          Hidden
-                        </div>
-                      )}
-                      {/* Delete */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteAlbum(album);
-                        }}
-                        className="absolute top-2 right-2 bg-white border border-gray-200 text-xs w-8 h-8 flex items-center justify-center opacity-100 transition-opacity hover:bg-red-500 hover:text-white hover:border-red-500 z-10 sm:w-6 sm:h-6 sm:opacity-0 sm:group-hover:opacity-100"
-                      >
-                        ✕
-                      </button>
-                      {/* Info */}
-                      <div
-                        className="p-3 cursor-pointer"
-                        onClick={() => setSelectedAlbum(album)}
-                      >
-                        <p className="text-sm font-medium text-gray-900 truncate">
-                          {album.title}
-                        </p>
-                        {album.description && (
-                          <p className="text-xs text-gray-400 truncate">
-                            {album.description}
-                          </p>
-                        )}
-                      </div>
-                      {/* Action row */}
-                      <div className="px-3 pb-3 flex items-center gap-2 flex-wrap">
+                        {/* Delete */}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            setEditingAlbum(album);
+                            deleteAlbum(album);
                           }}
-                          className="text-[9px] uppercase tracking-widest border border-gray-200 text-gray-500 px-2 py-1 hover:bg-gray-50 transition-colors"
+                          className="absolute top-2 right-2 bg-white border border-gray-200 text-xs w-8 h-8 flex items-center justify-center opacity-100 transition-opacity hover:bg-red-500 hover:text-white hover:border-red-500 z-10 sm:w-6 sm:h-6 sm:opacity-0 sm:group-hover:opacity-100"
                         >
-                          Edit
+                          ✕
                         </button>
-	                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            supabase
-                              .from("albums")
-                              .update({ visible: !(album.visible ?? true) })
-                              .eq("id", album.id)
-                              .then(() => loadAlbums());
-                          }}
-                          className="text-[9px] uppercase tracking-widest border border-gray-200 text-gray-500 px-2 py-1 hover:bg-gray-50 transition-colors"
+                        {/* Info */}
+                        <div
+                          className="p-3 cursor-pointer"
+                          onClick={() => setSelectedAlbum(album)}
                         >
-                          {album.visible === false ? "Show" : "Hide"}
-                        </button>
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {album.title}
+                          </p>
+                          {album.description && (
+                            <p className="text-xs text-gray-400 truncate">
+                              {album.description}
+                            </p>
+                          )}
+                        </div>
+                        {/* Action row */}
+                        <div className="px-3 pb-3 flex items-center gap-2 flex-wrap">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingAlbum(album);
+                            }}
+                            className="text-[9px] uppercase tracking-widest border border-gray-200 text-gray-500 px-2 py-1 hover:bg-gray-50 transition-colors"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              supabase
+                                .from("albums")
+                                .update({ visible: !(album.visible ?? true) })
+                                .eq("id", album.id)
+                                .then(() => loadAlbums());
+                            }}
+                            className="text-[9px] uppercase tracking-widest border border-gray-200 text-gray-500 px-2 py-1 hover:bg-gray-50 transition-colors"
+                          >
+                            {album.visible === false ? "Show" : "Hide"}
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
 
-	                  <div
-	                    onClick={() => {
-	                      setNewAlbumType("gallery");
-	                      setShowNewAlbum(true);
-	                      scrollToNewAlbumForm();
-	                    }}
-	                    className="hidden md:flex border-2 border-dashed border-gray-300 hover:border-gray-500 aspect-video flex-col items-center justify-center cursor-pointer transition-colors text-gray-400 hover:text-gray-600"
-	                    role="button"
-	                    tabIndex={0}
-	                    onKeyDown={(e) => {
-	                      if (e.key === "Enter" || e.key === " ") {
-	                        setNewAlbumType("gallery");
-	                        setShowNewAlbum(true);
-	                        scrollToNewAlbumForm();
-	                      }
-	                    }}
-	                    aria-label="Create new album"
-	                    title="New album"
-	                  >
-	                    <span className="text-2xl mb-1">+</span>
-	                    <span className="text-xs uppercase tracking-widest">
-	                      New Album
-	                    </span>
-	                  </div>
+                  <div
+                    onClick={() => {
+                      setNewAlbumType("gallery");
+                      setShowNewAlbum(true);
+                      scrollToNewAlbumForm();
+                    }}
+                    className="hidden md:flex border-2 border-dashed border-gray-300 hover:border-gray-500 aspect-video flex-col items-center justify-center cursor-pointer transition-colors text-gray-400 hover:text-gray-600"
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        setNewAlbumType("gallery");
+                        setShowNewAlbum(true);
+                        scrollToNewAlbumForm();
+                      }
+                    }}
+                    aria-label="Create new album"
+                    title="New album"
+                  >
+                    <span className="text-2xl mb-1">+</span>
+                    <span className="text-xs uppercase tracking-widest">
+                      New Album
+                    </span>
+                  </div>
                 </div>
               </div>
             );
@@ -1860,28 +2125,50 @@ function PhotographyAdmin() {
 
           {currentPhotos.length > 0 && (
             <>
-              <p className="text-xs text-gray-400 mb-3 uppercase tracking-widest">
-                {view === "all"
-                  ? "Library view · order photos inside albums and portfolios"
-                  : "Drag the handle to reorder this album · tap edit or delete"}
-              </p>
+              <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs text-gray-400 uppercase tracking-widest">
+                  {view === "all"
+                    ? "Library View"
+                    : "Drag the handle to reorder this album · tap edit or delete"}
+                </p>
+                {view === "all" && (
+                  <label className="flex items-center">
+                    <select
+                      value={allPhotosSort}
+                      onChange={(event) =>
+                        setAllPhotosSort(event.target.value as AllPhotosSort)
+                      }
+                      className="border border-gray-200 bg-white px-3 py-2 text-xs uppercase tracking-widest text-gray-700 outline-none focus:border-gray-900"
+                    >
+                      <option value="">Sort by</option>
+                      <option value="date-added">Date added</option>
+                      {homeFeatureEnabled && (
+                        <option value="home-featured">Homepage featured</option>
+                      )}
+                      <option value="hidden">Hidden</option>
+                    </select>
+                  </label>
+                )}
+              </div>
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
                 onDragEnd={handleDragEnd}
               >
                 <SortableContext
-                  items={currentPhotos.map((p) => p.id)}
+                  items={displayedPhotos.map((p) => p.id)}
                   strategy={rectSortingStrategy}
                 >
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    {currentPhotos.map((photo) => (
+                    {displayedPhotos.map((photo) => (
                       <SortablePhoto
                         key={photo.id}
                         photo={photo}
                         onDelete={deletePhoto}
                         onEdit={setEditingPhoto}
-                        onToggleHome={toggleHomeFeatured}
+                        onToggleHome={
+                          homeFeatureEnabled ? toggleHomeFeatured : undefined
+                        }
                         onToggleVis={cycleVisibility}
                         albums={view === "all" ? albums : undefined}
                         onViewAlbum={
@@ -1947,7 +2234,6 @@ function PortfolioAdmin({
   } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messageTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const imgRef = useRef<HTMLImageElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -2002,7 +2288,8 @@ function PortfolioAdmin({
         ),
       );
     } catch (error) {
-      const messageText = error instanceof Error ? error.message : String(error);
+      const messageText =
+        error instanceof Error ? error.message : String(error);
       showToast(`Failed to load photos: ${messageText}`);
     }
   };
@@ -2031,16 +2318,29 @@ function PortfolioAdmin({
   }, [onViewPageHrefChange, selectedAlbum]);
 
   const handleFiles = (files: FileList | null) => {
-    if (!files?.[0]) return;
+    const imageFiles = Array.from(files ?? []).filter((file) =>
+      file.type.startsWith("image/"),
+    );
+    if (imageFiles.length === 0) return;
     if (messageTimer.current) clearTimeout(messageTimer.current);
     setMessage("");
-    setPendingFile(files[0]);
+
+    if (imageFiles.length > 1) {
+      uploadPortfolioPhotoBatch(imageFiles);
+      return;
+    }
+
+    setPendingFile(imageFiles[0]);
     const reader = new FileReader();
     reader.onload = () => setCropSrc(reader.result as string);
-    reader.readAsDataURL(files[0]);
+    reader.readAsDataURL(imageFiles[0]);
   };
 
-  const uploadPortfolioPhoto = async (fileOrBlob: File | Blob, caption: string) => {
+  const uploadPortfolioPhoto = async (
+    fileOrBlob: File | Blob,
+    caption: string,
+    sortOrder?: number,
+  ) => {
     if (!selectedAlbum) throw new Error("Choose a portfolio album first.");
     const ext =
       fileOrBlob instanceof File ? fileOrBlob.name.split(".").pop() : "jpg";
@@ -2058,7 +2358,7 @@ function PortfolioAdmin({
       .insert({
         url: upload.url,
         caption,
-        sort_order: photos.length,
+        sort_order: sortOrder ?? photos.length,
         album_id: selectedAlbum.id,
         visibility: "portfolio_only",
         visible: true,
@@ -2069,46 +2369,60 @@ function PortfolioAdmin({
     if (data) await savePhotoAlbumLinks(data.id, [selectedAlbum.id]);
   };
 
-  const getCroppedBlob = (crop: Crop): Promise<Blob> =>
-    new Promise((resolve, reject) => {
-      const img = imgRef.current;
-      if (!img || !crop) return reject("No crop");
-      const canvas = document.createElement("canvas");
-      const scaleX = img.naturalWidth / img.width;
-      const scaleY = img.naturalHeight / img.height;
-      const pw = (crop.width / 100) * img.width * scaleX;
-      const ph = (crop.height / 100) * img.height * scaleY;
-      canvas.width = pw;
-      canvas.height = ph;
-      canvas
-        .getContext("2d")!
-        .drawImage(
-          img,
-          (crop.x / 100) * img.width * scaleX,
-          (crop.y / 100) * img.height * scaleY,
-          pw,
-          ph,
-          0,
-          0,
-          pw,
-          ph,
-        );
-      canvas.toBlob(
-        (b) => (b ? resolve(b) : reject("Failed")),
-        "image/jpeg",
-        0.92,
-      );
+  const uploadPortfolioPhotoBatch = async (files: File[]) => {
+    setUploading(true);
+    setMessage("");
+    try {
+      for (const [index, file] of files.entries()) {
+        await uploadPortfolioPhoto(file, "", photos.length + index);
+      }
+      setTimedMessage(`✓ Uploaded ${files.length} photos`, "success");
+      showToast(`Uploaded ${files.length} photos`, "success");
+      if (fileRef.current) fileRef.current.value = "";
+      if (selectedAlbum) loadPhotos(selectedAlbum.id);
+    } catch (error) {
+      const messageText =
+        error instanceof Error ? error.message : String(error);
+      setTimedMessage(`Error: ${messageText}`);
+      showToast(`Batch upload failed: ${messageText}`);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const replacePhotoImage = async (photo: PhotoRow, blob: Blob) => {
+    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
+    const upload = await uploadMedia({
+      bucket: "Photographs",
+      folder: "portfolio",
+      file: blob,
+      fileName,
+      contentType: "image/jpeg",
+      resourceType: "image",
     });
+    const { error } = await supabase
+      .from("photos")
+      .update({ url: upload.url })
+      .eq("id", photo.id);
+    if (error) throw error;
+
+    setEditingPhoto((current) =>
+      current?.id === photo.id ? { ...current, url: upload.url } : current,
+    );
+    showToast("Crop saved", "success");
+    if (selectedAlbum) loadPhotos(selectedAlbum.id);
+  };
 
   const handleCropUpload = async (
     crop: Crop,
     _aspect: AspectOption,
     caption: string,
+    image: HTMLImageElement | null,
   ) => {
     setUploading(true);
     setMessage("");
     try {
-      const blob = await getCroppedBlob(crop);
+      const blob = await createCroppedImageBlob(image, crop);
       await uploadPortfolioPhoto(blob, caption);
       setTimedMessage("✓ Uploaded", "success");
       showToast("Photo uploaded", "success");
@@ -2117,7 +2431,8 @@ function PortfolioAdmin({
       if (fileRef.current) fileRef.current.value = "";
       if (selectedAlbum) loadPhotos(selectedAlbum.id);
     } catch (error) {
-      const messageText = error instanceof Error ? error.message : String(error);
+      const messageText =
+        error instanceof Error ? error.message : String(error);
       setTimedMessage(`Error: ${messageText}`);
       showToast(`Upload failed: ${messageText}`);
     } finally {
@@ -2138,7 +2453,8 @@ function PortfolioAdmin({
       if (fileRef.current) fileRef.current.value = "";
       if (selectedAlbum) loadPhotos(selectedAlbum.id);
     } catch (error) {
-      const messageText = error instanceof Error ? error.message : String(error);
+      const messageText =
+        error instanceof Error ? error.message : String(error);
       setTimedMessage(`Error: ${messageText}`);
       showToast(`Upload failed: ${messageText}`);
     } finally {
@@ -2171,6 +2487,7 @@ function PortfolioAdmin({
     title: string,
     description: string,
     type: "gallery" | "portfolio",
+    showTitle: boolean,
   ) => {
     const current = albums.find((album) => album.id === id);
     const { error } = await supabase
@@ -2179,6 +2496,7 @@ function PortfolioAdmin({
         title,
         description,
         album_type: type,
+        show_title: showTitle,
         visible: current?.visible ?? true,
       })
       .eq("id", id);
@@ -2195,12 +2513,17 @@ function PortfolioAdmin({
         title,
         description,
         album_type: type,
+        show_title: showTitle,
       });
     }
   };
 
   const deleteAlbum = async (album: AlbumRow) => {
-    if (!confirm(`Delete album "${album.title}"? Photos will stay in the library.`))
+    if (
+      !confirm(
+        `Delete album "${album.title}"? Photos will stay in the library.`,
+      )
+    )
       return;
     await supabase
       .from("photos")
@@ -2297,7 +2620,8 @@ function PortfolioAdmin({
       );
       showToast("Order saved", "success");
     } catch (error) {
-      const messageText = error instanceof Error ? error.message : String(error);
+      const messageText =
+        error instanceof Error ? error.message : String(error);
       showToast(`Failed to save order: ${messageText}`);
       loadPhotos(selectedAlbum.id);
     }
@@ -2328,7 +2652,6 @@ function PortfolioAdmin({
 
       {cropSrc && (
         <div style={{ position: "fixed", inset: 0, zIndex: 50 }}>
-          <img ref={imgRef} src={cropSrc} style={{ display: "none" }} alt="" />
           <CropModal
             src={cropSrc}
             onUpload={handleCropUpload}
@@ -2349,6 +2672,7 @@ function PortfolioAdmin({
           photo={editingPhoto}
           albums={albums}
           onSave={saveEdit}
+          onReplaceImage={replacePhotoImage}
           onClose={() => setEditingPhoto(null)}
         />
       )}
@@ -2393,6 +2717,7 @@ function PortfolioAdmin({
               ref={fileRef}
               type="file"
               accept="image/*"
+              multiple
               className="hidden"
               onChange={(e) => handleFiles(e.target.files)}
             />
@@ -2617,375 +2942,720 @@ function PortfolioAdmin({
   );
 }
 
-// ─── Videos Admin ─────────────────────────────────────────────────────────────
+// ─── About Admin ──────────────────────────────────────────────────────────────
 
-interface VideoRow {
-  id: string;
-  url: string;
-  title: string;
-  created_at: string;
-}
+function getAboutAdminErrorMessage(error: unknown) {
+  const message = getErrorMessage(error);
+  const lowerMessage = message.toLowerCase();
 
-function getYouTubeId(url: string) {
-  try {
-    const parsed = new URL(url);
-    if (parsed.hostname.includes("youtu.be")) return parsed.pathname.slice(1);
-    if (parsed.hostname.includes("youtube.com")) {
-      if (parsed.pathname.startsWith("/shorts/"))
-        return parsed.pathname.split("/")[2];
-      if (parsed.pathname.startsWith("/embed/"))
-        return parsed.pathname.split("/")[2];
-      return parsed.searchParams.get("v");
-    }
-  } catch {
-    return null;
+  if (
+    lowerMessage.includes("about_page") ||
+    lowerMessage.includes("page_title") ||
+    lowerMessage.includes("services_heading") ||
+    lowerMessage.includes("clients_heading") ||
+    lowerMessage.includes("contact_heading") ||
+    lowerMessage.includes("about_styles")
+  ) {
+    return `Supabase needs the About page migration applied first. Details: ${message}`;
   }
-  return null;
+
+  return message;
 }
 
-function isYouTubeUrl(url: string) {
-  return Boolean(getYouTubeId(url));
-}
+function RichTextEditor({
+  label,
+  value,
+  onChange,
+  minHeight = "min-h-24",
+  disabled,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  minHeight?: string;
+  disabled: boolean;
+}) {
+  const editorRef = useRef<HTMLDivElement>(null);
+  const [colourMenuOpen, setColourMenuOpen] = useState(false);
+  const [selectedColour, setSelectedColour] = useState("#111827");
+  const greyscaleColours = [
+    "#000000",
+    "#374151",
+    "#6b7280",
+    "#9ca3af",
+    "#d1d5db",
+    "#e5e7eb",
+    "#f3f4f6",
+    "#ffffff",
+  ];
+  const brightColours = [
+    "#dc2626",
+    "#f97316",
+    "#facc15",
+    "#22c55e",
+    "#06b6d4",
+    "#3b82f6",
+    "#1d4ed8",
+    "#9333ea",
+    "#ec4899",
+  ];
+  const shadeRows = [
+    [
+      "#fee2e2",
+      "#ffedd5",
+      "#fef3c7",
+      "#dcfce7",
+      "#ccfbf1",
+      "#dbeafe",
+      "#ede9fe",
+      "#fce7f3",
+    ],
+    [
+      "#fecaca",
+      "#fed7aa",
+      "#fde68a",
+      "#bbf7d0",
+      "#99f6e4",
+      "#bfdbfe",
+      "#ddd6fe",
+      "#fbcfe8",
+    ],
+    [
+      "#f87171",
+      "#fb923c",
+      "#fbbf24",
+      "#4ade80",
+      "#2dd4bf",
+      "#60a5fa",
+      "#a78bfa",
+      "#f472b6",
+    ],
+    [
+      "#dc2626",
+      "#ea580c",
+      "#d97706",
+      "#16a34a",
+      "#0f766e",
+      "#2563eb",
+      "#7c3aed",
+      "#db2777",
+    ],
+    [
+      "#991b1b",
+      "#9a3412",
+      "#92400e",
+      "#166534",
+      "#134e4a",
+      "#1e40af",
+      "#5b21b6",
+      "#9d174d",
+    ],
+  ];
+  const themeColours = [
+    "#111827",
+    "#4b5563",
+    "#f9fafb",
+    "#f59e0b",
+    "#111827",
+    "#64748b",
+    "#fb923c",
+    "#0891b2",
+    "#d9f99d",
+  ];
+  const customSlots = [
+    "#ffffff",
+    "#f9fafb",
+    "#f3f4f6",
+    "#e5e7eb",
+    "#d1d5db",
+    "#9ca3af",
+    "#6b7280",
+    "#374151",
+    "#111827",
+    "#000000",
+  ];
+  useEffect(() => {
+    if (!editorRef.current) return;
+    const nextValue = sanitizeRichText(value);
+    if (editorRef.current.innerHTML !== nextValue) {
+      editorRef.current.innerHTML = nextValue;
+    }
+  }, [value]);
 
-function VideosAdmin() {
-  const [videos, setVideos] = useState<VideoRow[]>([]);
-  const [uploading, setUploading] = useState(false);
-  const [title, setTitle] = useState("");
-  const [youtubeUrl, setYoutubeUrl] = useState("");
-  const [editingVideo, setEditingVideo] = useState<VideoRow | null>(null);
-  const [editingTitle, setEditingTitle] = useState("");
-  const [editingUrl, setEditingUrl] = useState("");
-  const [dragOver, setDragOver] = useState(false);
-  const [message, setMessage] = useState("");
-  const fileRef = useRef<HTMLInputElement>(null);
+  const emitChange = () => {
+    if (!editorRef.current) return;
+    onChange(sanitizeRichText(editorRef.current.innerHTML));
+  };
 
-  const load = async () => {
-    const { data, error } = await supabase
-      .from("videos")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (error) {
-      setMessage(`Error loading videos: ${error.message}`);
+  const selectionIsInsideEditor = () => {
+    const selection = window.getSelection();
+    const editor = editorRef.current;
+    if (!selection || !editor || selection.rangeCount === 0) return false;
+    return editor.contains(selection.getRangeAt(0).commonAncestorContainer);
+  };
+
+  const applyInlineStyle = (style: Partial<CSSStyleDeclaration>) => {
+    const editor = editorRef.current;
+    if (!editor || disabled) return;
+    editor.focus();
+
+    const selection = window.getSelection();
+    if (
+      !selection ||
+      !selectionIsInsideEditor() ||
+      selection.rangeCount === 0
+    ) {
+      const wrapper = document.createElement("span");
+      Object.assign(wrapper.style, style);
+      while (editor.firstChild) wrapper.appendChild(editor.firstChild);
+      editor.appendChild(wrapper);
+      emitChange();
       return;
     }
-    if (data) setVideos(data);
+
+    const range = selection.getRangeAt(0);
+    const span = document.createElement("span");
+    Object.assign(span.style, style);
+    span.appendChild(range.extractContents());
+    range.insertNode(span);
+    selection.removeAllRanges();
+    const nextRange = document.createRange();
+    nextRange.selectNodeContents(span);
+    selection.addRange(nextRange);
+    emitChange();
   };
+
+  const applyColour = (colour: string) => {
+    setSelectedColour(colour);
+    applyInlineStyle({ color: colour });
+    setColourMenuOpen(false);
+  };
+
+  const runCommand = (
+    command:
+      | "bold"
+      | "italic"
+      | "underline"
+      | "justifyLeft"
+      | "justifyCenter"
+      | "justifyRight"
+      | "removeFormat",
+  ) => {
+    if (disabled) return;
+    editorRef.current?.focus();
+    document.execCommand(command);
+    emitChange();
+  };
+
+  return (
+    <div className="mb-5">
+      <span className="block text-[10px] uppercase tracking-widest text-gray-400 mb-2">
+        {label}
+      </span>
+      <div className="flex flex-wrap items-center gap-2 border border-gray-200 border-b-0 bg-gray-50 p-2">
+        <button
+          type="button"
+          onClick={() => runCommand("bold")}
+          disabled={disabled}
+          className="flex h-8 w-8 items-center justify-center border border-gray-200 bg-white text-gray-700 hover:border-gray-400 disabled:opacity-50"
+          aria-label="Bold"
+          title="Bold"
+        >
+          <Bold size={14} strokeWidth={2.4} />
+        </button>
+        <button
+          type="button"
+          onClick={() => runCommand("italic")}
+          disabled={disabled}
+          className="flex h-8 w-8 items-center justify-center border border-gray-200 bg-white text-gray-700 hover:border-gray-400 disabled:opacity-50"
+          aria-label="Italic"
+          title="Italic"
+        >
+          <Italic size={14} strokeWidth={2.4} />
+        </button>
+        <button
+          type="button"
+          onClick={() => runCommand("underline")}
+          disabled={disabled}
+          className="flex h-8 w-8 items-center justify-center border border-gray-200 bg-white text-gray-700 hover:border-gray-400 disabled:opacity-50"
+          aria-label="Underline"
+          title="Underline"
+        >
+          <Underline size={14} strokeWidth={2.4} />
+        </button>
+        <select
+          onChange={(event) => {
+            if (event.target.value) {
+              applyInlineStyle({ fontSize: `${event.target.value}px` });
+              event.target.value = "";
+            }
+          }}
+          disabled={disabled}
+          className="border border-gray-200 bg-white px-2 py-1 text-xs text-gray-700 outline-none focus:border-gray-900 disabled:opacity-50"
+          defaultValue=""
+        >
+          <option value="" disabled>
+            Size
+          </option>
+          <option value="12">12</option>
+          <option value="14">14</option>
+          <option value="16">16</option>
+          <option value="18">18</option>
+          <option value="22">22</option>
+          <option value="28">28</option>
+        </select>
+        <select
+          onChange={(event) => {
+            if (event.target.value) {
+              applyInlineStyle({ fontFamily: event.target.value });
+              event.target.value = "";
+            }
+          }}
+          disabled={disabled}
+          className="border border-gray-200 bg-white px-2 py-1 text-xs text-gray-700 outline-none focus:border-gray-900 disabled:opacity-50"
+          defaultValue=""
+        >
+          <option value="" disabled>
+            Font
+          </option>
+          <option value="sans-serif">Clean Sans</option>
+          <option value="serif">Editorial Serif</option>
+          <option value="monospace">Mono</option>
+        </select>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setColourMenuOpen((open) => !open)}
+            disabled={disabled}
+            className="flex h-8 w-8 flex-col items-center justify-center border border-gray-200 bg-white text-gray-700 hover:border-gray-400 disabled:opacity-50"
+            aria-label="Text colour"
+            title="Text colour"
+          >
+            <span className="text-sm font-semibold leading-none">A</span>
+            <span
+              className="mt-0.5 h-1 w-5"
+              style={{ backgroundColor: selectedColour }}
+            />
+          </button>
+
+          {colourMenuOpen && (
+            <div className="absolute left-0 top-10 z-50 w-[300px] border border-gray-200 bg-white p-3 shadow-lg">
+              <div className="mb-2 grid grid-cols-8 gap-1">
+                {greyscaleColours.map((colour) => (
+                  <button
+                    key={colour}
+                    type="button"
+                    onClick={() => applyColour(colour)}
+                    className="relative h-6 w-6 border border-gray-200"
+                    style={{ backgroundColor: colour }}
+                    aria-label={`Set text colour ${colour}`}
+                    title={colour}
+                  >
+                    {selectedColour === colour && (
+                      <Check
+                        size={15}
+                        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white drop-shadow"
+                      />
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mb-2 grid grid-cols-9 gap-1">
+                {brightColours.map((colour) => (
+                  <button
+                    key={colour}
+                    type="button"
+                    onClick={() => applyColour(colour)}
+                    className="relative h-6 w-6 border border-gray-200"
+                    style={{ backgroundColor: colour }}
+                    aria-label={`Set text colour ${colour}`}
+                    title={colour}
+                  >
+                    {selectedColour === colour && (
+                      <Check
+                        size={15}
+                        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white drop-shadow"
+                      />
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mb-3 flex flex-col gap-1">
+                {shadeRows.map((row) => (
+                  <div key={row.join("-")} className="grid grid-cols-8 gap-1">
+                    {row.map((colour) => (
+                      <button
+                        key={colour}
+                        type="button"
+                        onClick={() => applyColour(colour)}
+                        className="relative h-6 w-6 border border-gray-200"
+                        style={{ backgroundColor: colour }}
+                        aria-label={`Set text colour ${colour}`}
+                        title={colour}
+                      >
+                        {selectedColour === colour && (
+                          <Check
+                            size={15}
+                            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white drop-shadow"
+                          />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                ))}
+              </div>
+
+              <p className="mb-2 text-xs text-gray-500">Theme</p>
+              <div className="mb-3 grid grid-cols-9 gap-1">
+                {themeColours.map((colour, index) => (
+                  <button
+                    key={`${colour}-${index}`}
+                    type="button"
+                    onClick={() => applyColour(colour)}
+                    className="relative h-6 w-6 border border-gray-200"
+                    style={{ backgroundColor: colour }}
+                    aria-label={`Set text colour ${colour}`}
+                    title={colour}
+                  >
+                    {selectedColour === colour && (
+                      <Check
+                        size={15}
+                        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white drop-shadow"
+                      />
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              <label className="mb-3 flex cursor-pointer items-center justify-center border-t border-gray-100 pt-3 text-sm text-gray-600 hover:text-gray-900">
+                Custom...
+                <input
+                  type="color"
+                  onChange={(event) => applyColour(event.target.value)}
+                  className="sr-only"
+                  aria-label="Choose custom text colour"
+                />
+              </label>
+
+              <div className="grid grid-cols-10 gap-1 border-t border-gray-100 pt-3">
+                {customSlots.map((colour, index) => (
+                  <button
+                    key={`${colour}-${index}`}
+                    type="button"
+                    onClick={() => applyColour(colour)}
+                    className="h-6 w-6 border border-gray-200"
+                    style={{ backgroundColor: colour }}
+                    aria-label={`Set text colour ${colour}`}
+                    title={colour}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => runCommand("justifyLeft")}
+          disabled={disabled}
+          className="flex h-8 w-8 items-center justify-center border border-gray-200 bg-white text-gray-700 hover:border-gray-400 disabled:opacity-50"
+          aria-label="Align left"
+          title="Align left"
+        >
+          <AlignLeft size={15} strokeWidth={2.2} />
+        </button>
+        <button
+          type="button"
+          onClick={() => runCommand("justifyCenter")}
+          disabled={disabled}
+          className="flex h-8 w-8 items-center justify-center border border-gray-200 bg-white text-gray-700 hover:border-gray-400 disabled:opacity-50"
+          aria-label="Align center"
+          title="Align center"
+        >
+          <AlignCenter size={15} strokeWidth={2.2} />
+        </button>
+        <button
+          type="button"
+          onClick={() => runCommand("justifyRight")}
+          disabled={disabled}
+          className="flex h-8 w-8 items-center justify-center border border-gray-200 bg-white text-gray-700 hover:border-gray-400 disabled:opacity-50"
+          aria-label="Align right"
+          title="Align right"
+        >
+          <AlignRight size={15} strokeWidth={2.2} />
+        </button>
+        <button
+          type="button"
+          onClick={() => runCommand("removeFormat")}
+          disabled={disabled}
+          className="flex h-8 w-8 items-center justify-center border border-gray-200 bg-white text-gray-700 hover:border-gray-400 disabled:opacity-50"
+          aria-label="Clear formatting"
+          title="Clear formatting"
+        >
+          <Eraser size={14} strokeWidth={2.2} />
+        </button>
+      </div>
+      <div
+        ref={editorRef}
+        contentEditable={!disabled}
+        suppressContentEditableWarning
+        onInput={emitChange}
+        className={`w-full border border-gray-200 px-4 py-3 text-sm leading-relaxed outline-none focus:border-gray-900 ${minHeight}`}
+      />
+    </div>
+  );
+}
+
+function AboutAdmin() {
+  const [form, setForm] = useState<AboutContent>(defaultAboutContent);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
-    load();
+    let active = true;
+
+    loadAboutContent()
+      .then((content) => {
+        if (!active) return;
+        setForm(content);
+      })
+      .catch((error) => {
+        if (!active) return;
+        const messageText = getAboutAdminErrorMessage(error);
+        setMessage(`Error loading about page: ${messageText}`);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
-  const uploadFile = async (file: File) => {
-    setUploading(true);
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setSaving(true);
     setMessage("");
+
     try {
-      const ext = file.name.split(".").pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-
-      const upload = await uploadMedia({
-        bucket: "Videos",
-        folder: "videos",
-        file,
-        fileName,
-        contentType: file.type,
-        resourceType: "video",
+      await saveAboutContent({
+        ...form,
+        id: "about",
+        page_title:
+          sanitizeRichText(form.page_title).trim() ||
+          defaultAboutContent.page_title,
+        intro: sanitizeRichText(form.intro).trim(),
+        about_sections: form.about_sections
+          .map((section) => ({
+            id: section.id,
+            heading: sanitizeRichText(section.heading).trim(),
+            body: sanitizeRichText(section.body).trim(),
+          }))
+          .filter((section) => section.heading || section.body),
+        contact_section: {
+          id: "contact",
+          heading:
+            sanitizeRichText(form.contact_section.heading).trim() ||
+            defaultAboutContent.contact_section.heading,
+          body: sanitizeRichText(form.contact_section.body).trim(),
+        },
+        about_styles: form.about_styles,
       });
-
-      const { error: dbError } = await supabase.from("videos").insert({
-        url: upload.url,
-        title: title || file.name,
-      });
-
-      if (dbError) throw dbError;
-
-      setTitle("");
-      setMessage("✓ Uploaded successfully");
-      if (fileRef.current) fileRef.current.value = "";
-      load();
-    } catch (err: unknown) {
-      setMessage(`Error: ${err instanceof Error ? err.message : String(err)}`);
+      setMessage("✓ About page saved");
+    } catch (error) {
+      const messageText = getAboutAdminErrorMessage(error);
+      setMessage(`Error saving about page: ${messageText}`);
     } finally {
-      setUploading(false);
+      setSaving(false);
     }
   };
 
-  const addYouTubeVideo = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmedUrl = youtubeUrl.trim();
-    if (!getYouTubeId(trimmedUrl)) {
-      setMessage("Error: enter a valid YouTube URL");
-      return;
-    }
-
-    const { error } = await supabase.from("videos").insert({
-      url: trimmedUrl,
-      title: title.trim() || "YouTube video",
-    });
-
-    if (error) {
-      setMessage(`Error: ${error.message}`);
-      return;
-    }
-
-    setTitle("");
-    setYoutubeUrl("");
-    setMessage("✓ YouTube video added");
-    load();
+  const updateSection = (
+    sectionId: string,
+    updates: Partial<{ heading: string; body: string }>,
+  ) => {
+    setForm((current) => ({
+      ...current,
+      about_sections: current.about_sections.map((section) =>
+        section.id === sectionId ? { ...section, ...updates } : section,
+      ),
+    }));
   };
 
-  const deleteVideo = async (video: VideoRow) => {
-    if (!confirm("Delete this video?")) return;
-    const fileName = !isYouTubeUrl(video.url)
-      ? video.url.split("/").pop()
-      : null;
-    if (fileName && !isCloudinaryUrl(video.url)) {
-      const { error: storageError } = await supabase.storage
-        .from("Videos")
-        .remove([fileName]);
-      if (storageError)
-        setMessage(
-          `Warning: could not delete file from storage — ${storageError.message}`,
-        );
-    }
-    const { error } = await supabase.from("videos").delete().eq("id", video.id);
-    if (error) {
-      setMessage(`Error deleting video: ${error.message}`);
-      return;
-    }
-    setMessage("✓ Video deleted");
-    load();
+  const addSection = () => {
+    setForm((current) => ({
+      ...current,
+      about_sections: [
+        ...current.about_sections,
+        {
+          id: `section-${Date.now()}`,
+          heading: "New heading",
+          body: "<div>New body text</div>",
+        },
+      ],
+    }));
   };
 
-  const startEditVideo = (video: VideoRow) => {
-    setEditingVideo(video);
-    setEditingTitle(video.title);
-    setEditingUrl(video.url);
+  const removeSection = (sectionId: string) => {
+    setForm((current) => ({
+      ...current,
+      about_sections: current.about_sections.filter(
+        (section) => section.id !== sectionId,
+      ),
+    }));
   };
 
-  const saveVideoEdit = async () => {
-    if (!editingVideo) return;
-    const trimmedTitle = editingTitle.trim();
-    const trimmedUrl = editingUrl.trim();
-    if (!trimmedUrl) {
-      setMessage("Error saving video: URL is required");
-      return;
-    }
-
-    const { error } = await supabase
-      .from("videos")
-      .update({ title: trimmedTitle || editingVideo.title, url: trimmedUrl })
-      .eq("id", editingVideo.id);
-
-    if (error) {
-      setMessage(`Error saving video: ${error.message}`);
-      return;
-    }
-
-    setMessage("✓ Video updated");
-    setEditingVideo(null);
-    setEditingTitle("");
-    setEditingUrl("");
-    load();
+  const updateContactSection = (
+    updates: Partial<{ heading: string; body: string }>,
+  ) => {
+    setForm((current) => ({
+      ...current,
+      contact_section: {
+        ...current.contact_section,
+        ...updates,
+      },
+    }));
   };
 
   return (
     <div>
-      <h2 className="text-xs uppercase tracking-widest text-gray-400 mb-6">
-        Videos
-      </h2>
-
-      {/* Upload area */}
-      <div
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragOver(true);
-        }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDragOver(false);
-          if (e.dataTransfer.files[0]) uploadFile(e.dataTransfer.files[0]);
-        }}
-        onClick={() => fileRef.current?.click()}
-        className={`border-2 border-dashed p-6 text-center cursor-pointer transition-colors mb-4 sm:p-12 ${
-          dragOver
-            ? "border-gray-900 bg-gray-100"
-            : "border-gray-300 hover:border-gray-500"
-        }`}
-      >
-        <input
-          ref={fileRef}
-          type="file"
-          accept="video/*"
-          className="hidden"
-          onChange={(e) => e.target.files?.[0] && uploadFile(e.target.files[0])}
-        />
-        {uploading ? (
-          <p className="text-xs uppercase tracking-widest text-gray-400 animate-pulse">
-            Uploading… this may take a moment
-          </p>
-        ) : (
-          <>
-            <p className="text-sm text-gray-500">Drag & drop a video here</p>
-            <p className="text-xs text-gray-400 mt-1">
-              or click to browse — MP4, MOV, WEBM
-            </p>
-          </>
-        )}
+      <div className="mb-6">
+        <h2 className="text-xs uppercase tracking-widest text-gray-400 mb-2">
+          About Page
+        </h2>
+        <p className="text-xs text-gray-400">
+          Edit the public title, headings, biography, lists, contact email, and
+          text styling.
+        </p>
       </div>
-
-      <input
-        type="text"
-        placeholder="Title (optional — defaults to filename)"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        className="w-full border border-gray-200 px-4 py-3 text-sm outline-none focus:border-gray-900 mb-4"
-      />
 
       <form
-        onSubmit={addYouTubeVideo}
-        className="bg-white border border-gray-200 p-4 mb-6"
+        onSubmit={handleSubmit}
+        className="bg-white border border-gray-200 p-4 sm:p-6"
       >
-        <p className="text-xs uppercase tracking-widest text-gray-400 mb-3">
-          Add YouTube video
-        </p>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <input
-            type="url"
-            placeholder="YouTube URL"
-            value={youtubeUrl}
-            onChange={(e) => setYoutubeUrl(e.target.value)}
-            className="min-w-0 flex-1 border border-gray-200 px-3 py-2 text-sm outline-none focus:border-gray-900"
-          />
-          <button
-            type="submit"
-            className="bg-gray-900 text-white text-xs uppercase tracking-widest px-4 py-2 hover:bg-gray-700"
-          >
-            Add
-          </button>
-        </div>
-      </form>
+        <RichTextEditor
+          label="Page Title"
+          value={form.page_title}
+          onChange={(pageTitle) =>
+            setForm((current) => ({ ...current, page_title: pageTitle }))
+          }
+          minHeight="min-h-12"
+          disabled={loading || saving}
+        />
 
-      {message && (
-        <p
-          className={`text-xs mb-6 ${message.startsWith("✓") ? "text-green-600" : "text-red-500"}`}
-        >
-          {message}
-        </p>
-      )}
+        <RichTextEditor
+          label="Intro"
+          value={form.intro}
+          onChange={(intro) => setForm((current) => ({ ...current, intro }))}
+          minHeight="min-h-40"
+          disabled={loading || saving}
+        />
 
-      {editingVideo && (
-        <div className="bg-white border border-gray-200 p-4 mb-6 max-w-md">
-          <p className="text-xs uppercase tracking-widest text-gray-400 mb-3">
-            Edit video
-          </p>
-          <input
-            type="text"
-            value={editingTitle}
-            onChange={(e) => setEditingTitle(e.target.value)}
-            className="w-full border border-gray-200 px-3 py-2 text-sm outline-none focus:border-gray-900 mb-3"
-            placeholder="Video title"
-          />
-          <input
-            type="text"
-            value={editingUrl}
-            onChange={(e) => setEditingUrl(e.target.value)}
-            className="w-full border border-gray-200 px-3 py-2 text-sm outline-none focus:border-gray-900 mb-3"
-            placeholder="Video file or YouTube URL"
-          />
-          <div className="flex gap-2">
+        <div className="mb-6">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <p className="text-[10px] uppercase tracking-widest text-gray-400">
+              Sections
+            </p>
             <button
-              onClick={saveVideoEdit}
-              className="bg-gray-900 text-white text-xs uppercase tracking-widest px-4 py-2 hover:bg-gray-700"
+              type="button"
+              onClick={addSection}
+              disabled={loading || saving}
+              className="border border-gray-200 px-3 py-2 text-[10px] uppercase tracking-widest text-gray-500 hover:border-gray-900 hover:text-gray-900 disabled:opacity-50"
             >
-              Save
-            </button>
-            <button
-              onClick={() => {
-                setEditingVideo(null);
-                setEditingTitle("");
-                setEditingUrl("");
-              }}
-              className="text-xs text-gray-400 hover:text-gray-900 px-3 py-2"
-            >
-              Cancel
+              Add Section
             </button>
           </div>
+
+          <div className="flex flex-col gap-5">
+            {form.about_sections.map((section, index) => (
+              <div key={section.id} className="border border-gray-200 p-4">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <p className="text-xs text-gray-500">Section {index + 1}</p>
+                  <button
+                    type="button"
+                    onClick={() => removeSection(section.id)}
+                    disabled={loading || saving}
+                    className="text-[10px] uppercase tracking-widest text-gray-400 hover:text-red-500 disabled:opacity-50"
+                  >
+                    Remove
+                  </button>
+                </div>
+
+                <RichTextEditor
+                  label="Heading"
+                  value={section.heading}
+                  onChange={(heading) => updateSection(section.id, { heading })}
+                  minHeight="min-h-12"
+                  disabled={loading || saving}
+                />
+
+                <RichTextEditor
+                  label="Body"
+                  value={section.body}
+                  onChange={(body) => updateSection(section.id, { body })}
+                  minHeight="min-h-32"
+                  disabled={loading || saving}
+                />
+              </div>
+            ))}
+          </div>
         </div>
-      )}
 
-      {/* Existing videos */}
-      <div className="flex flex-col gap-4 mt-6">
-        {videos.map((video) => {
-          const youtubeId = getYouTubeId(video.url);
-          return (
-            <div
-              key={video.id}
-              className="flex flex-col gap-3 bg-white border border-gray-200 p-4 sm:flex-row sm:items-center sm:gap-4"
+        <div className="mb-6 border border-gray-200 p-4">
+          <p className="mb-4 text-xs text-gray-500">Contact Section</p>
+          <RichTextEditor
+            label="Heading"
+            value={form.contact_section.heading}
+            onChange={(heading) => updateContactSection({ heading })}
+            minHeight="min-h-12"
+            disabled={loading || saving}
+          />
+
+          <RichTextEditor
+            label="Body"
+            value={form.contact_section.body}
+            onChange={(body) => updateContactSection({ body })}
+            minHeight="min-h-24"
+            disabled={loading || saving}
+          />
+        </div>
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <button
+            type="submit"
+            disabled={loading || saving}
+            className="bg-gray-900 text-white text-xs uppercase tracking-widest px-5 py-3 hover:bg-gray-700 disabled:cursor-wait disabled:opacity-60"
+          >
+            {saving ? "Saving…" : loading ? "Loading…" : "Save About Page"}
+          </button>
+          {message && (
+            <p
+              className={`text-xs ${message.startsWith("✓") ? "text-green-600" : "text-red-500"}`}
             >
-              {youtubeId ? (
-                <iframe
-                  src={`https://www.youtube.com/embed/${youtubeId}`}
-                  title={video.title}
-                  className="w-full aspect-video bg-black sm:w-40 sm:h-24"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
-              ) : (
-                <video
-                  src={video.url}
-                  className="w-full aspect-video object-contain bg-black sm:w-40 sm:h-24"
-                  controls
-                  muted
-                  preload="metadata"
-                />
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {video.title}
-                </p>
-                <a
-                  href={video.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-xs text-gray-400 hover:text-gray-700 truncate block"
-                >
-                  View file ↗
-                </a>
-              </div>
-              <div className="flex gap-2 sm:justify-end">
-                <button
-                  onClick={() => startEditVideo(video)}
-                  className="text-xs uppercase tracking-widest bg-gray-900 text-white px-3 py-1.5 hover:bg-gray-700 transition-colors"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => deleteVideo(video)}
-                  className="text-xs uppercase tracking-widest bg-white border border-gray-200 px-3 py-1.5 hover:bg-red-500 hover:text-white hover:border-red-500 transition-colors"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {videos.length === 0 && !uploading && (
-        <p className="text-xs text-gray-400 mt-4">
-          No videos yet. Upload your first video above.
-        </p>
-      )}
+              {message}
+            </p>
+          )}
+        </div>
+      </form>
     </div>
   );
 }
+
+// ─── Videos Admin ─────────────────────────────────────────────────────────────
 
 // ─── Shop Admin ───────────────────────────────────────────────────────────────
 
 function ShopAdmin() {
   const [items, setItems] = useState<ShopRow[]>([]);
-  const [form, setForm] = useState({ title: "", price: "", stock: "" });
+  const [form, setForm] = useState({
+    title: "",
+    price: "",
+    stock: "",
+    checkout_url: "",
+  });
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
   const [dragOver, setDragOver] = useState(false);
@@ -3035,12 +3705,13 @@ function ShopAdmin() {
         title: form.title,
         price: form.price,
         stock: form.stock,
+        checkout_url: form.checkout_url.trim() || null,
         image_url: upload.url,
       });
 
       if (dbError) throw dbError;
 
-      setForm({ title: "", price: "", stock: "" });
+      setForm({ title: "", price: "", stock: "", checkout_url: "" });
       setPendingFile(null);
       setPreview("");
       setMessage("✓ Item added successfully");
@@ -3099,7 +3770,14 @@ function ShopAdmin() {
             placeholder="Stock info (e.g. Limited Edition)"
             value={form.stock}
             onChange={(e) => setForm({ ...form, stock: e.target.value })}
-            className="border border-gray-200 px-4 py-3 text-sm outline-none focus:border-gray-900 md:col-span-2"
+            className="border border-gray-200 px-4 py-3 text-sm outline-none focus:border-gray-900"
+          />
+          <input
+            type="url"
+            placeholder="Stripe payment link (optional)"
+            value={form.checkout_url}
+            onChange={(e) => setForm({ ...form, checkout_url: e.target.value })}
+            className="border border-gray-200 px-4 py-3 text-sm outline-none focus:border-gray-900"
           />
         </div>
 

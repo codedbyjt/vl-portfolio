@@ -1,13 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X } from "lucide-react";
+import { ChevronDown, Menu, X } from "lucide-react";
 
 const NAV_ITEMS = [
-  { label: "Photography", path: "/photography" },
   { label: "Video", path: "/video" },
   { label: "Shop", path: "/shop" },
-  { label: "Instagram", path: "https://instagram.com", external: true },
+  { label: "Instagram", path: "https://www.instagram.com/viclentaigne/", external: true },
   { label: "About", path: "/about" },
 ];
 
@@ -20,14 +19,90 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [searchParams] = useSearchParams();
   const [mobileOpen, setMobileOpen] = useState(false);
   const isHome = location.pathname === "/";
+  const isPhotographySection = location.pathname.startsWith("/photography");
+  const shouldCollapsePhotographyNav =
+    isPhotographySection &&
+    (location.state as { collapsePhotographyNav?: boolean } | null)
+      ?.collapsePhotographyNav === true;
+  const [photographyOpen, setPhotographyOpen] = useState(
+    isPhotographySection && !shouldCollapsePhotographyNav,
+  );
   // Shared album link — hide all nav chrome (only when explicitly ref'd from a shared link)
   const isSharedAlbum =
     (location.pathname === "/photography" &&
       searchParams.get("ref") === "shared") ||
     (location.pathname === "/about" && searchParams.get("ref") === "album");
 
+  useEffect(() => {
+    if (isPhotographySection) {
+      setPhotographyOpen(!shouldCollapsePhotographyNav);
+    }
+  }, [isPhotographySection, shouldCollapsePhotographyNav]);
+
   const NavLinks = ({ onClick }: { onClick?: () => void }) => (
     <ul className="flex flex-col gap-1">
+      <li>
+        <button
+          onClick={() => setPhotographyOpen((open) => !open)}
+          aria-expanded={photographyOpen}
+          className={`flex w-full items-center justify-between text-[14px] leading-7 tracking-wide transition-colors text-left uppercase ${
+            isPhotographySection
+              ? "text-gray-900 underline underline-offset-2"
+              : "text-gray-500 hover:text-gray-900"
+          }`}
+        >
+          <span>Photography</span>
+          <ChevronDown
+            size={14}
+            className={`transition-transform ${
+              photographyOpen ? "rotate-180" : ""
+            }`}
+            aria-hidden="true"
+          />
+        </button>
+        <AnimatePresence initial={false}>
+          {photographyOpen && (
+            <motion.ul
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              className="overflow-hidden pl-4"
+            >
+              <li>
+                <button
+                  onClick={() => {
+                    navigate("/photography");
+                    onClick?.();
+                  }}
+                  className={`block w-full text-left text-[12px] leading-6 tracking-wide uppercase transition-colors ${
+                    location.pathname === "/photography"
+                      ? "text-gray-900"
+                      : "text-gray-400 hover:text-gray-900"
+                  }`}
+                >
+                  Main Portfolio
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => {
+                    navigate("/photography/commercial");
+                    onClick?.();
+                  }}
+                  className={`block w-full text-left text-[12px] leading-6 tracking-wide uppercase transition-colors ${
+                    location.pathname === "/photography/commercial"
+                      ? "text-gray-900"
+                      : "text-gray-400 hover:text-gray-900"
+                  }`}
+                >
+                  Commercial
+                </button>
+              </li>
+            </motion.ul>
+          )}
+        </AnimatePresence>
+      </li>
       {NAV_ITEMS.map(({ label, path, external }) => {
         const active = !external && location.pathname.startsWith(path);
         return (
