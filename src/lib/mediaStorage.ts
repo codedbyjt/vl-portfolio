@@ -31,6 +31,13 @@ export function isCloudinaryUrl(url: string) {
   return url.includes("res.cloudinary.com/");
 }
 
+export function getDisplayImageUrl(url: string) {
+  if (!isCloudinaryUrl(url) || !url.includes("/image/upload/")) return url;
+  if (url.includes("/image/upload/f_auto,q_auto/")) return url;
+
+  return url.replace("/image/upload/", "/image/upload/f_auto,q_auto/");
+}
+
 function getCloudinaryFolder(folder: string) {
   const cleanFolder = folder.replace(/^\/+|\/+$/g, "");
   const cleanBase = cloudinaryBaseFolder?.replace(/^\/+|\/+$/g, "");
@@ -70,8 +77,14 @@ async function uploadToCloudinary({
     throw new Error("Cloudinary upload succeeded but did not return a URL.");
   }
 
+  const uploadedUrl = data.secure_url;
+  const displayUrl =
+    resourceType === "image" || data?.resource_type === "image"
+      ? getDisplayImageUrl(uploadedUrl)
+      : uploadedUrl;
+
   return {
-    url: data.secure_url,
+    url: displayUrl,
     provider: "cloudinary",
   };
 }
