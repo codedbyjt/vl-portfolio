@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import JSZip from "jszip";
 import { supabase } from "../lib/supabase";
+import { formatShopPrice } from "../lib/formatPrice";
 import {
   loadPhotoAlbumLinks,
   mergePhotoAlbumIds,
@@ -3858,9 +3859,14 @@ function ShopAdmin() {
               <p className="text-sm font-medium text-gray-900 truncate">
                 {item.title}
               </p>
-              <p className="text-xs text-gray-500">
-                {item.price} · {item.stock}
+              <p className="text-xs font-medium text-gray-900 tabular-nums">
+                {formatShopPrice(item.price)}
               </p>
+              {item.stock && (
+                <p className="text-[11px] uppercase tracking-[0.14em] text-gray-400">
+                  {item.stock}
+                </p>
+              )}
             </div>
             <button
               onClick={() => deleteItem(item)}

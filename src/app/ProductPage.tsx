@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import { formatShopPrice } from "../lib/formatPrice";
 import { supabase } from "../lib/supabase";
 
 interface ShopItem {
@@ -91,9 +92,9 @@ export default function ProductPage() {
             )}
           </div>
 
-          <div>
-            <p className="text-[20px] text-gray-900 font-medium mb-4">
-              {product.price}
+          <div className="pt-6 md:pt-0">
+            <p className="text-[28px] leading-none text-gray-900 font-medium tabular-nums mb-5">
+              {formatShopPrice(product.price)}
             </p>
             {product.checkout_url ? (
               <a

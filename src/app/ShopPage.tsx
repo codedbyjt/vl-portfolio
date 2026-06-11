@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { formatShopPrice } from "../lib/formatPrice";
 import { supabase } from "../lib/supabase";
 
 interface ShopItem {
@@ -64,11 +65,19 @@ export default function ShopPage() {
                 className="w-full h-full object-cover group-hover:opacity-80 transition-opacity duration-300"
               />
             </div>
-            <p className="text-[13px] text-gray-900">{item.title}</p>
-            <p className="text-[12px] text-gray-400 mt-0.5">
-              {item.price}
-              {item.stock ? ` · ${item.stock}` : ""}
+            <p className="text-[13px] text-gray-900 leading-snug">
+              {item.title}
             </p>
+            <div className="mt-1 flex flex-col gap-0.5">
+              <p className="text-[13px] font-medium text-gray-900 tabular-nums">
+                {formatShopPrice(item.price)}
+              </p>
+              {item.stock && (
+                <p className="text-[11px] uppercase tracking-[0.16em] text-gray-400">
+                  {item.stock}
+                </p>
+              )}
+            </div>
           </div>
         ))}
       </div>
