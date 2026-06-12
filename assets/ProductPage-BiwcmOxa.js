@@ -1,4 +1,4 @@
-import{c as m,u as p,e as u,b as r,j as e}from"./index-rqxK_mJk.js";import{f as h}from"./formatPrice-ChijkAgy.js";import{s as g}from"./supabase-B_Jp2-RT.js";/**
+import{c as m,u as p,e as u,b as r,j as e}from"./index-BIqMUWI-.js";import{f as h}from"./formatPrice-ChijkAgy.js";import{s as g}from"./supabase-B_Jp2-RT.js";/**
  * @license lucide-react v0.487.0 - ISC
  *
  * This source code is licensed under the ISC license.
