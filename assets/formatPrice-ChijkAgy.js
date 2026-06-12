@@ -1,0 +1,1 @@
+function i(r){const t=r==null?void 0:r.trim();if(!t)return"";const e=t.replace(/[£,]/g,"").replace(/\s/g,"");if(/^\d+(\.\d{1,2})?$/.test(e)){const n=Number(e);return new Intl.NumberFormat("en-GB",{style:"currency",currency:"GBP",minimumFractionDigits:Number.isInteger(n)?0:2,maximumFractionDigits:2}).format(n)}return t}export{i as f};
