@@ -1,4 +1,4 @@
-import{c as w,b as a,j as e,C as v}from"./index-DrQ1VWJD.js";import{d as k,l as I,a as c}from"./aboutContent-D8skFv3o.js";import{d as C,l as T}from"./siteSettings-Bz8sg_8_.js";import{s as M}from"./supabase-B_Jp2-RT.js";/**
+import{c as w,b as a,j as e,C as v}from"./index-Db1lrEfn.js";import{d as k,l as I,a as c}from"./aboutContent-D8skFv3o.js";import{d as C,l as T}from"./siteSettings-Bz8sg_8_.js";import{s as M}from"./supabase-B_Jp2-RT.js";/**
  * @license lucide-react v0.487.0 - ISC
  *
  * This source code is licensed under the ISC license.
