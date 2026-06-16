@@ -1,29 +1,29 @@
 {
   "source": "cloudinary",
-  "checked_at": "2026-06-12T11:09:48.485Z",
+  "checked_at": "2026-06-16T23:16:07.485Z",
   "plan": "Free",
-  "last_updated": "2026-06-11",
-  "date_requested": "2026-06-12T00:00:00Z",
+  "last_updated": "2026-06-15",
+  "date_requested": "2026-06-16T00:00:00Z",
   "transformations": {
-    "usage": 118,
-    "credits_usage": 0.12,
+    "usage": 164,
+    "credits_usage": 0.16,
     "breakdown": {
-      "transformation": 104
+      "transformation": 124
     }
   },
   "objects": {
-    "usage": 175
+    "usage": 168
   },
   "bandwidth": {
-    "usage": 1420595866,
-    "credits_usage": 1.32
+    "usage": 5720954939,
+    "credits_usage": 5.33
   },
   "storage": {
-    "usage": 373510759,
-    "credits_usage": 0.35
+    "usage": 341049116,
+    "credits_usage": 0.32
   },
   "impressions": {
-    "usage": 655,
+    "usage": 2597,
     "credits_usage": 0
   },
   "seconds_delivered": {
@@ -31,13 +31,13 @@
     "credits_usage": 0
   },
   "credits": {
-    "usage": 1.79,
+    "usage": 5.81,
     "limit": 25,
-    "used_percent": 7.16
+    "used_percent": 23.24
   },
-  "resources": 126,
-  "derived_resources": 49,
-  "requests": 675,
+  "resources": 98,
+  "derived_resources": 70,
+  "requests": 2617,
   "media_limits": {
     "image_max_size_bytes": 10485760,
     "video_max_size_bytes": 104857600,

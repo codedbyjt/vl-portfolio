@@ -16,6 +16,16 @@ interface UploadMediaResult {
   provider: "cloudinary" | "supabase";
 }
 
+interface DeleteMediaOptions {
+  bucket: string;
+  url: string;
+}
+
+interface DeleteMediaResult {
+  deleted: boolean;
+  warning?: string;
+}
+
 const cloudinaryCloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
 const cloudinaryUploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 const cloudinaryBaseFolder = import.meta.env.VITE_CLOUDINARY_FOLDER;
@@ -38,10 +48,29 @@ export function getDisplayImageUrl(url: string) {
   return url.replace("/image/upload/", "/image/upload/f_auto,q_auto/");
 }
 
+function cleanPathPart(value: string) {
+  return value.replace(/^\/+|\/+$/g, "");
+}
+
 function getCloudinaryFolder(folder: string) {
-  const cleanFolder = folder.replace(/^\/+|\/+$/g, "");
-  const cleanBase = cloudinaryBaseFolder?.replace(/^\/+|\/+$/g, "");
+  const cleanFolder = cleanPathPart(folder);
+  const cleanBase = cloudinaryBaseFolder
+    ? cleanPathPart(cloudinaryBaseFolder)
+    : "";
   return [cleanBase, cleanFolder].filter(Boolean).join("/");
+}
+
+function getSupabaseStoragePath(url: string, bucket: string) {
+  try {
+    const parsed = new URL(url);
+    const marker = `/storage/v1/object/public/${bucket}/`;
+    const markerIndex = parsed.pathname.indexOf(marker);
+    if (markerIndex === -1) return null;
+
+    return decodeURIComponent(parsed.pathname.slice(markerIndex + marker.length));
+  } catch {
+    return null;
+  }
 }
 
 async function uploadToCloudinary({
@@ -91,11 +120,15 @@ async function uploadToCloudinary({
 
 async function uploadToSupabase({
   bucket,
+  folder,
   file,
   fileName,
   contentType,
 }: UploadMediaOptions): Promise<UploadMediaResult> {
-  const { error } = await supabase.storage.from(bucket).upload(fileName, file, {
+  const storagePath = [cleanPathPart(folder), cleanPathPart(fileName)]
+    .filter(Boolean)
+    .join("/");
+  const { error } = await supabase.storage.from(bucket).upload(storagePath, file, {
     cacheControl: "3600",
     upsert: false,
     contentType,
@@ -103,7 +136,7 @@ async function uploadToSupabase({
 
   if (error) throw error;
 
-  const { data } = supabase.storage.from(bucket).getPublicUrl(fileName);
+  const { data } = supabase.storage.from(bucket).getPublicUrl(storagePath);
   return {
     url: data.publicUrl,
     provider: "supabase",
@@ -124,4 +157,40 @@ export async function uploadMedia(
   }
 
   return uploadToSupabase(options);
+}
+
+export async function deleteMedia({
+  bucket,
+  url,
+}: DeleteMediaOptions): Promise<DeleteMediaResult> {
+  if (!url) return { deleted: false };
+
+  if (isCloudinaryUrl(url)) {
+    const { data, error } = await supabase.functions.invoke<DeleteMediaResult>(
+      "cloudinary-delete",
+      { body: { url } },
+    );
+
+    if (error) {
+      return {
+        deleted: false,
+        warning: `Cloudinary file was not deleted: ${error.message}`,
+      };
+    }
+
+    return data ?? { deleted: true };
+  }
+
+  const storagePath = getSupabaseStoragePath(url, bucket);
+  if (!storagePath) return { deleted: false };
+
+  const { error } = await supabase.storage.from(bucket).remove([storagePath]);
+  if (error) {
+    return {
+      deleted: false,
+      warning: `Supabase file was not deleted: ${error.message}`,
+    };
+  }
+
+  return { deleted: true };
 }

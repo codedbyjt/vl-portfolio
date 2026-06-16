@@ -11,8 +11,8 @@ import {
   sortPhotosForAlbum,
 } from "../lib/photoAlbums";
 import {
+  deleteMedia,
   getDisplayImageUrl,
-  isCloudinaryUrl,
   uploadMedia,
 } from "../lib/mediaStorage";
 import {
@@ -158,7 +158,9 @@ async function createOrRefreshPortfolioShare(albumId: string) {
 
   if (sessionError) throw sessionError;
   if (!sessionData.session) {
-    throw new Error("Your admin session has expired. Sign out, then sign in again.");
+    throw new Error(
+      "Your admin session has expired. Sign out, then sign in again.",
+    );
   }
 
   const { data, error } = await supabase.rpc(
@@ -361,7 +363,7 @@ export default function AdminPage() {
       </div>
 
       {/* Content */}
-      <div className="px-4 py-6 max-w-4xl sm:px-6 sm:py-8">
+      <div className="max-w-screen-2xl px-4 py-6 sm:px-6 sm:py-8">
         {tab === "photography" ? (
           <PhotographyAdmin />
         ) : tab === "portfolio" ? (
@@ -1118,17 +1120,14 @@ function EditAlbumModal({
     id: string,
     title: string,
     description: string,
-    type: "gallery" | "portfolio",
     showTitle: boolean,
   ) => void;
   onClose: () => void;
 }) {
   const [title, setTitle] = useState(album.title);
   const [description, setDescription] = useState(album.description);
-  const [albumType, setAlbumType] = useState<"gallery" | "portfolio">(
-    album.album_type ?? "gallery",
-  );
   const [showTitle, setShowTitle] = useState(album.show_title !== false);
+  const albumType = album.album_type ?? "gallery";
 
   return (
     <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-6">
@@ -1154,19 +1153,8 @@ function EditAlbumModal({
           <p className="text-xs uppercase tracking-widest text-gray-400 mb-2">
             Type
           </p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setAlbumType("gallery")}
-              className={`text-xs uppercase tracking-widest px-4 py-2 border transition-colors ${albumType === "gallery" ? "border-gray-900 text-gray-900 bg-gray-50" : "border-gray-200 text-gray-400 hover:text-gray-700"}`}
-            >
-              Gallery
-            </button>
-            <button
-              onClick={() => setAlbumType("portfolio")}
-              className={`text-xs uppercase tracking-widest px-4 py-2 border transition-colors ${albumType === "portfolio" ? "border-gray-900 text-gray-900 bg-gray-50" : "border-gray-200 text-gray-400 hover:text-gray-700"}`}
-            >
-              Portfolio
-            </button>
+          <div className="inline-flex border border-gray-200 bg-gray-50 px-4 py-2 text-xs uppercase tracking-widest text-gray-700">
+            {albumType === "gallery" ? "Gallery" : "Portfolio"}
           </div>
           <p className="text-[10px] text-gray-400 mt-2">
             {albumType === "gallery"
@@ -1192,9 +1180,7 @@ function EditAlbumModal({
         </label>
         <div className="flex gap-3">
           <button
-            onClick={() =>
-              onSave(album.id, title, description, albumType, showTitle)
-            }
+            onClick={() => onSave(album.id, title, description, showTitle)}
             className="bg-gray-900 text-white text-xs uppercase tracking-widest px-5 py-2 hover:bg-gray-700"
           >
             Save
@@ -1249,7 +1235,9 @@ function CopyLinkButton({
     e.stopPropagation();
     setState("loading");
     setManualCopyUrl(null);
-    setErrorMessage("Could not copy the link. Check your admin session and try again.");
+    setErrorMessage(
+      "Could not copy the link. Check your admin session and try again.",
+    );
     let showManualCopy = false;
     try {
       const share = await createOrRefreshPortfolioShare(albumId);
@@ -1269,10 +1257,13 @@ function CopyLinkButton({
       setErrorMessage(error instanceof Error ? error.message : String(error));
       setState("error");
     } finally {
-      setTimeout(() => {
-        setState("idle");
-        setManualCopyUrl(null);
-      }, showManualCopy ? 10000 : 3500);
+      setTimeout(
+        () => {
+          setState("idle");
+          setManualCopyUrl(null);
+        },
+        showManualCopy ? 10000 : 3500,
+      );
     }
   };
 
@@ -1298,9 +1289,9 @@ function CopyLinkButton({
               ? "border-amber-400 text-amber-600"
               : state === "manual"
                 ? "border-gray-300 text-gray-700"
-              : state === "error"
-                ? "border-red-400 text-red-600"
-              : "border-gray-200 text-gray-500 hover:bg-gray-50"
+                : state === "error"
+                  ? "border-red-400 text-red-600"
+                  : "border-gray-200 text-gray-500 hover:bg-gray-50"
         }`}
       >
         {state === "loading"
@@ -1309,9 +1300,9 @@ function CopyLinkButton({
             ? "Copy link"
             : state === "manual"
               ? "Copy manually"
-            : state === "error"
-              ? "Try again"
-              : "✓ Copied"}
+              : state === "error"
+                ? "Try again"
+                : "✓ Copied"}
       </button>
       {copiedLabel && (
         <span className="mt-1 text-[9px] text-gray-400">
@@ -1608,7 +1599,10 @@ function PhotographyAdmin() {
       })
       .select("id")
       .single();
-    if (dErr) throw dErr;
+    if (dErr) {
+      await deleteMedia({ bucket: "Photographs", url: upload.url });
+      throw dErr;
+    }
     if (selectedAlbum && insertedPhoto?.id) {
       await savePhotoAlbumLinks(insertedPhoto.id, [selectedAlbum.id]);
     }
@@ -1654,7 +1648,16 @@ function PhotographyAdmin() {
       .from("photos")
       .update({ url: upload.url })
       .eq("id", photo.id);
-    if (error) throw error;
+    if (error) {
+      await deleteMedia({ bucket: "Photographs", url: upload.url });
+      throw error;
+    }
+
+    const cleanup = await deleteMedia({
+      bucket: "Photographs",
+      url: photo.url,
+    });
+    if (cleanup.warning) showToast(cleanup.warning);
 
     setEditingPhoto((current) =>
       current?.id === photo.id ? { ...current, url: upload.url } : current,
@@ -1710,16 +1713,12 @@ function PhotographyAdmin() {
 
   const deletePhoto = async (photo: PhotoRow) => {
     if (!confirm("Delete this photo?")) return;
-    const fileName = photo.url.split("/").pop();
-    if (fileName && !isCloudinaryUrl(photo.url)) {
-      const { error: sErr } = await supabase.storage
-        .from("Photographs")
-        .remove([fileName]);
-      if (sErr)
-        showToast(
-          `Warning: could not delete file from storage — ${sErr.message}`,
-        );
-    }
+    const cleanup = await deleteMedia({
+      bucket: "Photographs",
+      url: photo.url,
+    });
+    if (cleanup.warning) showToast(cleanup.warning);
+
     const { error } = await supabase.from("photos").delete().eq("id", photo.id);
     if (error) {
       showToast(`Failed to delete photo: ${error.message}`);
@@ -1862,7 +1861,6 @@ function PhotographyAdmin() {
     id: string,
     title: string,
     description: string,
-    type: "gallery" | "portfolio",
     showTitle: boolean,
   ) => {
     if (!title.trim()) {
@@ -1871,7 +1869,7 @@ function PhotographyAdmin() {
     }
     const { error } = await supabase
       .from("albums")
-      .update({ title, description, album_type: type, show_title: showTitle })
+      .update({ title, description, show_title: showTitle })
       .eq("id", id);
     if (error) {
       showToast(`Failed to save album: ${error.message}`);
@@ -2073,7 +2071,7 @@ function PhotographyAdmin() {
                       : "— private, share via link only"}
                   </span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                   {sectionAlbums.map((album) => {
                     const albumPhotoCount = allPhotos.filter((photo) =>
                       photoBelongsToAlbum(photo, album.id),
@@ -2334,7 +2332,7 @@ function PhotographyAdmin() {
                   items={displayedPhotos.map((p) => p.id)}
                   strategy={rectSortingStrategy}
                 >
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                     {displayedPhotos.map((photo) => (
                       <SortablePhoto
                         key={photo.id}
@@ -2494,7 +2492,9 @@ function PortfolioAdmin({
     loadPortfolioShare(selectedAlbum.id)
       .then((share) => {
         if (!mounted) return;
-        onViewPageHrefChange(share?.token ? portfolioShareUrl(share.token) : null);
+        onViewPageHrefChange(
+          share?.token ? portfolioShareUrl(share.token) : null,
+        );
       })
       .catch(() => {
         if (mounted) onViewPageHrefChange(null);
@@ -2554,7 +2554,10 @@ function PortfolioAdmin({
       })
       .select("id")
       .single();
-    if (error) throw error;
+    if (error) {
+      await deleteMedia({ bucket: "Photographs", url: upload.url });
+      throw error;
+    }
     if (data) await savePhotoAlbumLinks(data.id, [selectedAlbum.id]);
   };
 
@@ -2593,7 +2596,16 @@ function PortfolioAdmin({
       .from("photos")
       .update({ url: upload.url })
       .eq("id", photo.id);
-    if (error) throw error;
+    if (error) {
+      await deleteMedia({ bucket: "Photographs", url: upload.url });
+      throw error;
+    }
+
+    const cleanup = await deleteMedia({
+      bucket: "Photographs",
+      url: photo.url,
+    });
+    if (cleanup.warning) showToast(cleanup.warning);
 
     setEditingPhoto((current) =>
       current?.id === photo.id ? { ...current, url: upload.url } : current,
@@ -2675,7 +2687,6 @@ function PortfolioAdmin({
     id: string,
     title: string,
     description: string,
-    type: "gallery" | "portfolio",
     showTitle: boolean,
   ) => {
     const current = albums.find((album) => album.id === id);
@@ -2684,7 +2695,6 @@ function PortfolioAdmin({
       .update({
         title,
         description,
-        album_type: type,
         show_title: showTitle,
         visible: current?.visible ?? true,
       })
@@ -2701,7 +2711,6 @@ function PortfolioAdmin({
         ...(selectedAlbum as AlbumRow),
         title,
         description,
-        album_type: type,
         show_title: showTitle,
       });
     }
@@ -2818,6 +2827,12 @@ function PortfolioAdmin({
 
   const deletePhoto = async (photo: PhotoRow) => {
     if (!confirm("Delete this photo?")) return;
+    const cleanup = await deleteMedia({
+      bucket: "Photographs",
+      url: photo.url,
+    });
+    if (cleanup.warning) showToast(cleanup.warning);
+
     const { error } = await supabase.from("photos").delete().eq("id", photo.id);
     if (error) {
       showToast(`Failed to delete photo: ${error.message}`);
@@ -3102,18 +3117,6 @@ function PortfolioAdmin({
                 </div>
               </div>
             ))}
-            <button
-              type="button"
-              onClick={() => setShowNewAlbum(true)}
-              className="hidden md:flex border-2 border-dashed border-gray-300 hover:border-gray-500 aspect-video flex-col items-center justify-center cursor-pointer transition-colors text-gray-400 hover:text-gray-600"
-              aria-label="Create portfolio album"
-              title="New portfolio album"
-            >
-              <span className="text-2xl mb-1">+</span>
-              <span className="text-xs uppercase tracking-widest">
-                New Portfolio
-              </span>
-            </button>
           </div>
         </div>
       )}
@@ -3919,6 +3922,8 @@ function ShopAdmin() {
     setMessage("");
     try {
       let imageUrl = editingItem?.image_url ?? "";
+      const previousImageUrl = editingItem?.image_url;
+      let uploadedImageUrl: string | null = null;
 
       if (pendingFile) {
         const ext = pendingFile.name.split(".").pop();
@@ -3933,6 +3938,7 @@ function ShopAdmin() {
           resourceType: "image",
         });
         imageUrl = upload.url;
+        uploadedImageUrl = upload.url;
       }
 
       const payload = {
@@ -3954,11 +3960,26 @@ function ShopAdmin() {
             sort_order: items.length,
           });
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        if (uploadedImageUrl) {
+          await deleteMedia({ bucket: "Shop", url: uploadedImageUrl });
+        }
+        throw dbError;
+      }
+
+      if (pendingFile && previousImageUrl) {
+        const cleanup = await deleteMedia({
+          bucket: "Shop",
+          url: previousImageUrl,
+        });
+        if (cleanup.warning) setMessage(cleanup.warning);
+      }
 
       resetForm();
       setMessage(
-        editingItem ? "✓ Item updated successfully" : "✓ Item added successfully",
+        editingItem
+          ? "✓ Item updated successfully"
+          : "✓ Item added successfully",
       );
       load();
     } catch (err: unknown) {
@@ -3970,11 +3991,23 @@ function ShopAdmin() {
 
   const deleteItem = async (item: ShopRow) => {
     if (!confirm("Delete this item?")) return;
-    const fileName = item.image_url.split("/").pop();
-    if (fileName && !isCloudinaryUrl(item.image_url)) {
-      await supabase.storage.from("Shop").remove([`shop/${fileName}`]);
+    const { error } = await supabase
+      .from("shop_items")
+      .delete()
+      .eq("id", item.id);
+    if (error) {
+      setMessage(`Error deleting item: ${error.message}`);
+      return;
     }
-    await supabase.from("shop_items").delete().eq("id", item.id);
+
+    const cleanup = await deleteMedia({ bucket: "Shop", url: item.image_url });
+    if (cleanup.warning) {
+      setMessage(`✓ Item removed from shop. ${cleanup.warning}`);
+      load();
+      return;
+    }
+
+    setMessage("✓ Item deleted");
     load();
   };
 
@@ -3994,11 +4027,7 @@ function ShopAdmin() {
   const moveItem = async (itemId: string, direction: -1 | 1) => {
     const currentIndex = items.findIndex((item) => item.id === itemId);
     const nextIndex = currentIndex + direction;
-    if (
-      currentIndex === -1 ||
-      nextIndex < 0 ||
-      nextIndex >= items.length
-    ) {
+    if (currentIndex === -1 || nextIndex < 0 || nextIndex >= items.length) {
       return;
     }
 
