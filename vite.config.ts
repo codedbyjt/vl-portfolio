@@ -125,4 +125,4 @@ export function createPortfolioViteConfig(buildBase: string, customDomain?: stri
   }))
 }
 
-export default createPortfolioViteConfig('/vl-portfolio/')
+export default createPortfolioViteConfig('/', 'www.viclentaigne.com')

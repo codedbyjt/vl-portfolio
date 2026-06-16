@@ -11,6 +11,9 @@
     "dev": "node scripts/start-dev.mjs",
     "dev:tunnel": "VITE_TUNNEL_HMR=true vite --host 0.0.0.0 --port 5173 --strictPort",
     "preview": "vite preview --host 127.0.0.1 --port 4173 --strictPort",
+    "test:browser": "playwright test",
+    "test:browser:ui": "playwright test --ui",
+    "test:browser:install": "playwright install chromium",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist",
     "deploy:custom-domain": "npm run build:custom-domain && npm run postbuild:custom-domain && gh-pages -d dist"
@@ -29,6 +32,7 @@
     "react-router-dom": "^7.17.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.0",
     "@tailwindcss/vite": "4.1.12",
     "@types/node": "^25.2.3",
     "@types/react": "^18.3.29",

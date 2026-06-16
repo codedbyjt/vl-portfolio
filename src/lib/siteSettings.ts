@@ -4,6 +4,9 @@ export type HomePageMode = "photography" | "landing";
 
 export interface SiteSettings {
   home_page_mode: HomePageMode;
+  subscription_enabled: boolean;
+  mailerlite_subscribe_url: string;
+  mailerlite_linked: boolean;
   seo_title: string;
   seo_description: string;
   seo_keywords: string;
@@ -13,6 +16,10 @@ export interface SiteSettings {
 
 export const defaultSiteSettings: SiteSettings = {
   home_page_mode: "photography",
+  subscription_enabled: true,
+  mailerlite_subscribe_url:
+    "https://assets.mailerlite.com/jsonp/2419708/forms/189799765443085665/subscribe",
+  mailerlite_linked: true,
   seo_title: "Vic Lentaigne",
   seo_description: "Photography and film portfolio by Vic Lentaigne.",
   seo_keywords: "photography, film, director, portfolio, photographer",
@@ -22,6 +29,9 @@ export const defaultSiteSettings: SiteSettings = {
 
 const siteSettingKeys = [
   "home_page_mode",
+  "subscription_enabled",
+  "mailerlite_subscribe_url",
+  "mailerlite_linked",
   "seo_title",
   "seo_description",
   "seo_keywords",
@@ -61,6 +71,18 @@ export async function loadSiteSettings(): Promise<SiteSettings> {
     home_page_mode: isHomePageMode(homePageMode)
       ? homePageMode
       : defaultSiteSettings.home_page_mode,
+    subscription_enabled: getBooleanSetting(
+      values.get("subscription_enabled"),
+      defaultSiteSettings.subscription_enabled,
+    ),
+    mailerlite_subscribe_url: getStringSetting(
+      values.get("mailerlite_subscribe_url"),
+      defaultSiteSettings.mailerlite_subscribe_url,
+    ),
+    mailerlite_linked: getBooleanSetting(
+      values.get("mailerlite_linked"),
+      defaultSiteSettings.mailerlite_linked,
+    ),
     seo_title: getStringSetting(
       values.get("seo_title"),
       defaultSiteSettings.seo_title,
@@ -88,6 +110,15 @@ export async function saveSiteSettings(settings: SiteSettings) {
   const { error } = await supabase.from("site_settings").upsert(
     [
       { key: "home_page_mode", value: settings.home_page_mode },
+      {
+        key: "subscription_enabled",
+        value: String(settings.subscription_enabled),
+      },
+      {
+        key: "mailerlite_subscribe_url",
+        value: settings.mailerlite_subscribe_url,
+      },
+      { key: "mailerlite_linked", value: String(settings.mailerlite_linked) },
       { key: "seo_title", value: settings.seo_title },
       { key: "seo_description", value: settings.seo_description },
       { key: "seo_keywords", value: settings.seo_keywords },

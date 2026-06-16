@@ -51,9 +51,12 @@ import {
   AlignCenter,
   AlignLeft,
   AlignRight,
+  ArrowDown,
+  ArrowUp,
   Bold,
   Check,
   Eraser,
+  GripVertical,
   Italic,
   Underline,
 } from "lucide-react";
@@ -108,8 +111,91 @@ interface ShopRow {
   price: string;
   stock: string;
   checkout_url?: string;
+  description?: string;
   image_url: string;
   created_at: string;
+  sort_order?: number | null;
+}
+
+interface PortfolioShareRow {
+  token: string;
+  copied_at: string | null;
+}
+
+function portfolioShareUrl(token: string) {
+  const basePath =
+    import.meta.env.BASE_URL === "/" ? "/" : import.meta.env.BASE_URL;
+  const url = new URL(`${basePath}photography`, window.location.origin);
+  url.searchParams.set("share", token);
+  return url.toString();
+}
+
+function formatCopiedAt(value: string | null) {
+  if (!value) return null;
+  return new Intl.DateTimeFormat(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+async function loadPortfolioShare(albumId: string) {
+  const { data, error } = await supabase
+    .from("portfolio_shares")
+    .select("token,copied_at")
+    .eq("album_id", albumId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data as PortfolioShareRow | null;
+}
+
+async function createOrRefreshPortfolioShare(albumId: string) {
+  const { data: sessionData, error: sessionError } =
+    await supabase.auth.getSession();
+
+  if (sessionError) throw sessionError;
+  if (!sessionData.session) {
+    throw new Error("Your admin session has expired. Sign out, then sign in again.");
+  }
+
+  const { data, error } = await supabase.rpc(
+    "create_or_refresh_portfolio_share",
+    { p_album_id: albumId },
+  );
+
+  if (error) throw error;
+  const share = Array.isArray(data) ? data[0] : data;
+  if (!share?.token) throw new Error("Supabase did not return a share token.");
+  return share as PortfolioShareRow;
+}
+
+async function copyTextToClipboard(text: string) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.left = "-9999px";
+    textarea.style.top = "0";
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+
+    try {
+      const copied = document.execCommand("copy");
+      textarea.remove();
+      return copied;
+    } catch {
+      textarea.remove();
+      return false;
+    }
+  }
 }
 
 // ─── Admin Page ───────────────────────────────────────────────────────────────
@@ -1134,38 +1220,126 @@ function CopyLinkButton({
   albumId: string;
   visible: boolean;
 }) {
-  const [state, setState] = useState<"idle" | "copied" | "warn">("idle");
+  const [state, setState] = useState<
+    "idle" | "loading" | "copied" | "warn" | "manual" | "error"
+  >("idle");
+  const [copiedAt, setCopiedAt] = useState<string | null>(null);
+  const [manualCopyUrl, setManualCopyUrl] = useState<string | null>(null);
+  const manualCopyInputRef = useRef<HTMLInputElement | null>(null);
+  const [errorMessage, setErrorMessage] = useState(
+    "Could not copy the link. Check your admin session and try again.",
+  );
 
-  const handleClick = (e: React.MouseEvent) => {
+  useEffect(() => {
+    let mounted = true;
+    loadPortfolioShare(albumId)
+      .then((share) => {
+        if (!mounted) return;
+        setCopiedAt(share?.copied_at ?? null);
+      })
+      .catch(() => {
+        if (mounted) setCopiedAt(null);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [albumId]);
+
+  const handleClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const basePath =
-      import.meta.env.BASE_URL === "/" ? "/" : import.meta.env.BASE_URL;
-    const url = new URL(`${basePath}photography`, window.location.origin);
-    url.searchParams.set("album", albumId);
-    url.searchParams.set("ref", "shared");
-    navigator.clipboard.writeText(url.toString());
-    setState(visible ? "copied" : "warn");
-    setTimeout(() => setState("idle"), 3500);
+    setState("loading");
+    setManualCopyUrl(null);
+    setErrorMessage("Could not copy the link. Check your admin session and try again.");
+    let showManualCopy = false;
+    try {
+      const share = await createOrRefreshPortfolioShare(albumId);
+      const shareUrl = portfolioShareUrl(share.token);
+      const copied = await copyTextToClipboard(shareUrl);
+      setCopiedAt(share.copied_at);
+      if (copied) {
+        setState(visible ? "copied" : "warn");
+      } else {
+        showManualCopy = true;
+        setManualCopyUrl(shareUrl);
+        setState("manual");
+        setErrorMessage("Copy was blocked. Select and copy this link instead.");
+      }
+    } catch (error) {
+      console.error("Could not copy portfolio link:", error);
+      setErrorMessage(error instanceof Error ? error.message : String(error));
+      setState("error");
+    } finally {
+      setTimeout(() => {
+        setState("idle");
+        setManualCopyUrl(null);
+      }, showManualCopy ? 10000 : 3500);
+    }
   };
+
+  const copiedLabel = formatCopiedAt(copiedAt);
+
+  useEffect(() => {
+    if (state !== "manual") return;
+    requestAnimationFrame(() => {
+      manualCopyInputRef.current?.focus();
+      manualCopyInputRef.current?.select();
+    });
+  }, [state, manualCopyUrl]);
 
   return (
     <div className="relative flex flex-col items-start">
       <button
         onClick={handleClick}
+        disabled={state === "loading"}
         className={`text-[9px] uppercase tracking-widest bg-white border px-2 py-1 transition-colors ${
           state === "copied"
             ? "border-green-400 text-green-600"
             : state === "warn"
               ? "border-amber-400 text-amber-600"
+              : state === "manual"
+                ? "border-gray-300 text-gray-700"
+              : state === "error"
+                ? "border-red-400 text-red-600"
               : "border-gray-200 text-gray-500 hover:bg-gray-50"
         }`}
       >
-        {state === "idle" ? "Copy link" : "✓ Copied"}
+        {state === "loading"
+          ? "Copying..."
+          : state === "idle"
+            ? "Copy link"
+            : state === "manual"
+              ? "Copy manually"
+            : state === "error"
+              ? "Try again"
+              : "✓ Copied"}
       </button>
+      {copiedLabel && (
+        <span className="mt-1 text-[9px] text-gray-400">
+          Last copied {copiedLabel}
+        </span>
+      )}
       {state === "warn" && (
         <div className="absolute bottom-full mb-1 left-0 bg-amber-50 border border-amber-300 text-amber-700 text-[9px] leading-snug px-2 py-1.5 w-[200px] shadow z-20">
           ⚠ Album is hidden — turn on visibility before sending or clients won't
           see any photos.
+        </div>
+      )}
+      {state === "error" && (
+        <div className="absolute bottom-full mb-1 left-0 bg-red-50 border border-red-300 text-red-700 text-[9px] leading-snug px-2 py-1.5 w-[200px] shadow z-20">
+          <p>{errorMessage}</p>
+        </div>
+      )}
+      {state === "manual" && manualCopyUrl && (
+        <div className="absolute bottom-full mb-1 left-0 bg-gray-50 border border-gray-200 text-gray-700 text-[9px] leading-snug px-2 py-1.5 w-[240px] shadow z-20">
+          <p>Link created. Press Cmd+C or Ctrl+C to copy it.</p>
+          <input
+            ref={manualCopyInputRef}
+            readOnly
+            value={manualCopyUrl}
+            onFocus={(event) => event.currentTarget.select()}
+            onClick={(event) => event.currentTarget.select()}
+            className="mt-2 w-full border border-gray-200 bg-white px-1 py-1 text-[9px] text-gray-700 outline-none"
+          />
         </div>
       )}
     </div>
@@ -2308,14 +2482,28 @@ function PortfolioAdmin({
   }, [selectedAlbum]);
 
   useEffect(() => {
-    const basePath =
-      import.meta.env.BASE_URL === "/" ? "/" : import.meta.env.BASE_URL;
-    onViewPageHrefChange(
-      selectedAlbum
-        ? `${basePath}photography?ref=shared&album=${selectedAlbum.id}`
-        : null,
-    );
-    return () => onViewPageHrefChange(null);
+    let mounted = true;
+    if (!selectedAlbum) {
+      onViewPageHrefChange(null);
+      return () => {
+        mounted = false;
+        onViewPageHrefChange(null);
+      };
+    }
+
+    loadPortfolioShare(selectedAlbum.id)
+      .then((share) => {
+        if (!mounted) return;
+        onViewPageHrefChange(share?.token ? portfolioShareUrl(share.token) : null);
+      })
+      .catch(() => {
+        if (mounted) onViewPageHrefChange(null);
+      });
+
+    return () => {
+      mounted = false;
+      onViewPageHrefChange(null);
+    };
   }, [onViewPageHrefChange, selectedAlbum]);
 
   const handleFiles = (files: FileList | null) => {
@@ -3651,11 +3839,13 @@ function AboutAdmin() {
 
 function ShopAdmin() {
   const [items, setItems] = useState<ShopRow[]>([]);
+  const [editingItem, setEditingItem] = useState<ShopRow | null>(null);
   const [form, setForm] = useState({
     title: "",
     price: "",
     stock: "",
     checkout_url: "",
+    description: "",
   });
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
@@ -3663,11 +3853,20 @@ function ShopAdmin() {
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string>("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 120, tolerance: 8 },
+    }),
+  );
 
   const load = async () => {
     const { data } = await supabase
       .from("shop_items")
       .select("*")
+      .order("sort_order", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: false });
     if (data) setItems(data);
   };
@@ -3681,41 +3880,86 @@ function ShopAdmin() {
     setPreview(URL.createObjectURL(file));
   };
 
+  const resetForm = () => {
+    setEditingItem(null);
+    setForm({
+      title: "",
+      price: "",
+      stock: "",
+      checkout_url: "",
+      description: "",
+    });
+    setPendingFile(null);
+    setPreview("");
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const startEdit = (item: ShopRow) => {
+    setEditingItem(item);
+    setForm({
+      title: item.title,
+      price: item.price,
+      stock: item.stock ?? "",
+      checkout_url: item.checkout_url ?? "",
+      description: item.description ?? "",
+    });
+    setPendingFile(null);
+    setPreview(item.image_url);
+    setMessage("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!pendingFile) {
+    if (!pendingFile && !editingItem) {
       setMessage("Please select an image");
       return;
     }
     setUploading(true);
     setMessage("");
     try {
-      const ext = pendingFile.name.split(".").pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      let imageUrl = editingItem?.image_url ?? "";
 
-      const upload = await uploadMedia({
-        bucket: "Shop",
-        folder: "shop",
-        file: pendingFile,
-        fileName,
-        contentType: pendingFile.type,
-        resourceType: "image",
-      });
+      if (pendingFile) {
+        const ext = pendingFile.name.split(".").pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
-      const { error: dbError } = await supabase.from("shop_items").insert({
+        const upload = await uploadMedia({
+          bucket: "Shop",
+          folder: "shop",
+          file: pendingFile,
+          fileName,
+          contentType: pendingFile.type,
+          resourceType: "image",
+        });
+        imageUrl = upload.url;
+      }
+
+      const payload = {
         title: form.title,
         price: form.price,
         stock: form.stock,
         checkout_url: form.checkout_url.trim() || null,
-        image_url: upload.url,
-      });
+        description: form.description.trim() || null,
+        image_url: imageUrl,
+      };
+
+      const { error: dbError } = editingItem
+        ? await supabase
+            .from("shop_items")
+            .update(payload)
+            .eq("id", editingItem.id)
+        : await supabase.from("shop_items").insert({
+            ...payload,
+            sort_order: items.length,
+          });
 
       if (dbError) throw dbError;
 
-      setForm({ title: "", price: "", stock: "", checkout_url: "" });
-      setPendingFile(null);
-      setPreview("");
-      setMessage("✓ Item added successfully");
+      resetForm();
+      setMessage(
+        editingItem ? "✓ Item updated successfully" : "✓ Item added successfully",
+      );
       load();
     } catch (err: unknown) {
       setMessage(`Error: ${err instanceof Error ? err.message : String(err)}`);
@@ -3728,10 +3972,64 @@ function ShopAdmin() {
     if (!confirm("Delete this item?")) return;
     const fileName = item.image_url.split("/").pop();
     if (fileName && !isCloudinaryUrl(item.image_url)) {
-      await supabase.storage.from("Shop").remove([fileName]);
+      await supabase.storage.from("Shop").remove([`shop/${fileName}`]);
     }
     await supabase.from("shop_items").delete().eq("id", item.id);
     load();
+  };
+
+  const saveShopOrder = async (reordered: ShopRow[]) => {
+    const updates = await Promise.all(
+      reordered.map((item, sortOrder) =>
+        supabase
+          .from("shop_items")
+          .update({ sort_order: sortOrder })
+          .eq("id", item.id),
+      ),
+    );
+    const failed = updates.find((result) => result.error);
+    if (failed?.error) throw failed.error;
+  };
+
+  const moveItem = async (itemId: string, direction: -1 | 1) => {
+    const currentIndex = items.findIndex((item) => item.id === itemId);
+    const nextIndex = currentIndex + direction;
+    if (
+      currentIndex === -1 ||
+      nextIndex < 0 ||
+      nextIndex >= items.length
+    ) {
+      return;
+    }
+
+    const reordered = arrayMove(items, currentIndex, nextIndex);
+    setItems(reordered);
+    try {
+      await saveShopOrder(reordered);
+      setMessage("✓ Shop order saved");
+    } catch (err: unknown) {
+      setMessage(`Error: ${err instanceof Error ? err.message : String(err)}`);
+      load();
+    }
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = items.findIndex((item) => item.id === active.id);
+    const newIndex = items.findIndex((item) => item.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reordered = arrayMove(items, oldIndex, newIndex);
+    setItems(reordered);
+
+    try {
+      await saveShopOrder(reordered);
+      setMessage("✓ Shop order saved");
+    } catch (err: unknown) {
+      setMessage(`Error: ${err instanceof Error ? err.message : String(err)}`);
+      load();
+    }
   };
 
   return (
@@ -3746,7 +4044,7 @@ function ShopAdmin() {
         className="bg-white border border-gray-200 p-6 mb-8"
       >
         <h3 className="text-xs uppercase tracking-widest text-gray-500 mb-4">
-          Add New Item
+          {editingItem ? "Edit Item" : "Add New Item"}
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -3779,6 +4077,12 @@ function ShopAdmin() {
             value={form.checkout_url}
             onChange={(e) => setForm({ ...form, checkout_url: e.target.value })}
             className="border border-gray-200 px-4 py-3 text-sm outline-none focus:border-gray-900"
+          />
+          <textarea
+            placeholder="Description (optional)"
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            className="md:col-span-2 min-h-28 border border-gray-200 px-4 py-3 text-sm outline-none focus:border-gray-900"
           />
         </div>
 
@@ -3819,7 +4123,9 @@ function ShopAdmin() {
             />
           ) : (
             <p className="text-xs text-gray-400">
-              Drag & drop product image or click to browse
+              {editingItem
+                ? "Drag & drop a new image or click to replace"
+                : "Drag & drop product image or click to browse"}
             </p>
           )}
         </div>
@@ -3832,55 +4138,168 @@ function ShopAdmin() {
           </p>
         )}
 
-        <button
-          type="submit"
-          disabled={uploading}
-          className="bg-gray-900 text-white text-xs uppercase tracking-widest px-6 py-3 hover:bg-gray-700 transition-colors disabled:opacity-50"
-        >
-          {uploading ? "Uploading…" : "Add Item"}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="submit"
+            disabled={uploading}
+            className="bg-gray-900 text-white text-xs uppercase tracking-widest px-6 py-3 hover:bg-gray-700 transition-colors disabled:opacity-50"
+          >
+            {uploading ? "Saving…" : editingItem ? "Save Item" : "Add Item"}
+          </button>
+          {editingItem && (
+            <button
+              type="button"
+              onClick={resetForm}
+              className="border border-gray-200 text-gray-500 text-xs uppercase tracking-widest px-6 py-3 hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
       </form>
 
       {/* Existing items */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        {items.map((item) => (
-          <div
-            key={item.id}
-            className="bg-white border border-gray-200 group relative"
-          >
-            <div className="aspect-[3/4] overflow-hidden bg-gray-50">
-              <img
-                src={item.image_url}
-                alt={item.title}
-                className="w-full h-full object-cover"
+      {items.length > 0 && (
+        <p className="mb-3 text-[11px] uppercase tracking-widest text-gray-400">
+          Drag the handle or use arrows to rearrange
+        </p>
+      )}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={items.map((item) => item.id)}
+          strategy={rectSortingStrategy}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+            {items.map((item, index) => (
+              <SortableShopItem
+                key={item.id}
+                item={item}
+                onEdit={startEdit}
+                onDelete={deleteItem}
+                onMoveUp={() => moveItem(item.id, -1)}
+                onMoveDown={() => moveItem(item.id, 1)}
+                canMoveUp={index > 0}
+                canMoveDown={index < items.length - 1}
               />
-            </div>
-            <div className="p-3">
-              <p className="text-sm font-medium text-gray-900 truncate">
-                {item.title}
-              </p>
-              <p className="text-xs font-medium text-gray-900 tabular-nums">
-                {formatShopPrice(item.price)}
-              </p>
-              {item.stock && (
-                <p className="text-[11px] uppercase tracking-[0.14em] text-gray-400">
-                  {item.stock}
-                </p>
-              )}
-            </div>
-            <button
-              onClick={() => deleteItem(item)}
-              className="absolute top-2 right-2 bg-white border border-gray-200 text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 hover:text-white hover:border-red-500"
-            >
-              ✕
-            </button>
+            ))}
           </div>
-        ))}
-      </div>
+        </SortableContext>
+      </DndContext>
 
       {items.length === 0 && !uploading && (
         <p className="text-xs text-gray-400">No shop items yet.</p>
       )}
+    </div>
+  );
+}
+
+function SortableShopItem({
+  item,
+  onEdit,
+  onDelete,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp,
+  canMoveDown,
+}: {
+  item: ShopRow;
+  onEdit: (item: ShopRow) => void;
+  onDelete: (item: ShopRow) => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.45 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="bg-white border border-gray-200 group relative"
+    >
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        className="absolute top-2 left-2 z-10 flex h-9 w-9 cursor-grab touch-none items-center justify-center rounded bg-white/90 text-gray-600 shadow-sm select-none active:cursor-grabbing"
+        aria-label={`Drag to reorder ${item.title}`}
+        title="Drag to reorder"
+      >
+        <GripVertical size={17} aria-hidden="true" />
+      </button>
+      <div className="aspect-[3/4] overflow-hidden bg-gray-50">
+        <img
+          src={item.image_url}
+          alt={item.title}
+          className="w-full h-full object-cover"
+        />
+      </div>
+      <div className="p-3">
+        <p className="text-sm font-medium text-gray-900 truncate">
+          {item.title}
+        </p>
+        <p className="text-xs font-medium text-gray-900 tabular-nums">
+          {formatShopPrice(item.price)}
+        </p>
+        {item.stock && (
+          <p className="text-[11px] uppercase tracking-[0.14em] text-gray-400">
+            {item.stock}
+          </p>
+        )}
+      </div>
+      <div className="absolute top-2 right-2 flex gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+        <button
+          type="button"
+          onClick={onMoveUp}
+          disabled={!canMoveUp}
+          className="flex h-8 w-8 items-center justify-center bg-white border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-30"
+          aria-label={`Move ${item.title} up`}
+          title="Move up"
+        >
+          <ArrowUp size={14} aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          onClick={onMoveDown}
+          disabled={!canMoveDown}
+          className="flex h-8 w-8 items-center justify-center bg-white border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-30"
+          aria-label={`Move ${item.title} down`}
+          title="Move down"
+        >
+          <ArrowDown size={14} aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          onClick={() => onEdit(item)}
+          className="bg-white border border-gray-200 text-[10px] uppercase tracking-widest px-2 py-1 hover:bg-gray-50"
+        >
+          Edit
+        </button>
+        <button
+          type="button"
+          onClick={() => onDelete(item)}
+          className="bg-white border border-gray-200 text-xs px-2 py-1 hover:bg-red-500 hover:text-white hover:border-red-500"
+        >
+          ✕
+        </button>
+      </div>
     </div>
   );
 }

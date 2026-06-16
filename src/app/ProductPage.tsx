@@ -66,51 +66,47 @@ export default function ProductPage() {
         </h1>
       </div>
 
-      <div className="px-6 py-10 max-w-2xl flex flex-col md:flex-row gap-10">
-        <div className="md:w-64 flex-shrink-0 bg-gray-50">
+      <div className="px-6 py-10 max-w-sm">
+        <div className="w-full bg-gray-50">
           <img
             src={product.image_url}
             alt={product.title}
-            className="w-full h-auto object-cover"
+            className="w-full aspect-[3/4] object-cover"
           />
         </div>
 
-        <div className="flex flex-col justify-between">
-          <div>
-            <h2 className="text-[18px] text-gray-900 font-medium mb-1">
-              {product.title}
-            </h2>
-            {product.stock && (
-              <p className="text-[12px] uppercase tracking-widest text-gray-400 mb-6">
-                {product.stock}
-              </p>
-            )}
-            {product.description && (
-              <p className="text-[14px] text-gray-600 leading-relaxed mb-8">
-                {product.description}
-              </p>
-            )}
-          </div>
-
-          <div className="pt-6 md:pt-0">
-            <p className="text-[28px] leading-none text-gray-900 font-medium tabular-nums mb-5">
-              {formatShopPrice(product.price)}
+        <div className="pt-5">
+          <h2 className="text-[18px] text-gray-900 font-medium mb-1">
+            {product.title}
+          </h2>
+          {product.stock && (
+            <p className="text-[12px] uppercase tracking-widest text-gray-400 mb-5">
+              {product.stock}
             </p>
-            {product.checkout_url ? (
-              <a
-                href={product.checkout_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block px-6 py-3 border border-gray-900 text-[13px] uppercase tracking-widest text-gray-900 hover:bg-gray-900 hover:text-white transition-colors duration-200"
-              >
-                {isStripeLink ? "Checkout with Stripe" : "Buy Now"}
-              </a>
-            ) : (
-              <p className="text-[13px] text-gray-400 uppercase tracking-widest">
-                Contact to purchase
-              </p>
-            )}
-          </div>
+          )}
+          {product.description && (
+            <p className="text-[14px] text-gray-600 leading-relaxed mb-7">
+              {product.description}
+            </p>
+          )}
+
+          <p className="text-[28px] leading-none text-gray-900 font-medium tabular-nums mb-5">
+            {formatShopPrice(product.price)}
+          </p>
+          {product.checkout_url ? (
+            <a
+              href={product.checkout_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block px-6 py-3 border border-gray-900 text-[13px] uppercase tracking-widest text-gray-900 hover:bg-gray-900 hover:text-white transition-colors duration-200"
+            >
+              {isStripeLink ? "Checkout with Stripe" : "Buy Now"}
+            </a>
+          ) : (
+            <p className="text-[13px] text-gray-400 uppercase tracking-widest">
+              Contact to purchase
+            </p>
+          )}
         </div>
       </div>
     </div>
