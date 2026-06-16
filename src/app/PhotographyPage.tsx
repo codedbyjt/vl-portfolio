@@ -326,7 +326,7 @@ function AlbumCarousel({
           <button
             onClick={() => go(-1)}
             disabled={slideIndex === 0}
-            className="w-7 h-7 flex items-center justify-center border border-gray-200 text-gray-500 hover:border-gray-900 hover:text-gray-900 transition-colors disabled:opacity-20 disabled:pointer-events-none"
+            className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-gray-900 transition-colors disabled:opacity-20 disabled:pointer-events-none"
             aria-label="Previous"
           >
             <ChevronLeft size={13} />
@@ -337,7 +337,7 @@ function AlbumCarousel({
           <button
             onClick={() => go(1)}
             disabled={slideIndex === slides.length - 1}
-            className="w-7 h-7 flex items-center justify-center border border-gray-200 text-gray-500 hover:border-gray-900 hover:text-gray-900 transition-colors disabled:opacity-20 disabled:pointer-events-none"
+            className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-gray-900 transition-colors disabled:opacity-20 disabled:pointer-events-none"
             aria-label="Next"
           >
             <ChevronRight size={13} />
@@ -346,7 +346,7 @@ function AlbumCarousel({
       )}
 
       {showThumbnails && visible.length > 1 && (
-        <div className="mt-5 flex gap-3 overflow-x-auto border-t border-gray-200 pt-4 pb-1">
+        <div className="mt-20 flex gap-3 overflow-x-auto border-t border-gray-200 pt-4 pb-1 lg:mt-28">
           {visible.map((photo) => {
             const targetSlideIndex = slides.findIndex((candidate) =>
               candidate.photos.some(
