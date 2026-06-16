@@ -40,6 +40,16 @@ interface CarouselSlide {
   photos: PhotoRow[];
 }
 
+interface SharedPortfolioPayload {
+  album: AlbumRow;
+  photos: PhotoRow[];
+  links: {
+    photo_id: string;
+    album_id: string;
+    sort_order?: number | null;
+  }[];
+}
+
 const publicAsset = (path: string) =>
   `${import.meta.env.BASE_URL}${path.replace(/^\//, "")}`;
 
@@ -390,14 +400,35 @@ export default function PhotographyPage() {
 
   const markErrored = (id: string) =>
     setErroredIds((prev) => new Set([...prev, id]));
+  const shareToken = searchParams.get("share");
   const sharedAlbumId =
-    searchParams.get("ref") === "shared" ? searchParams.get("album") : null;
+    !shareToken && searchParams.get("ref") === "shared"
+      ? searchParams.get("album")
+      : null;
   const clientName = searchParams.get("client") ?? "";
   const clientMessage = searchParams.get("msg") ?? "";
 
   useEffect(() => {
     const load = async () => {
       try {
+        if (shareToken) {
+          const { data, error } = await supabase.rpc("get_portfolio_share", {
+            p_token: shareToken,
+          });
+          if (error) throw error;
+          const shared = data as SharedPortfolioPayload | null;
+          if (!shared?.album) {
+            setAlbums([]);
+            setPhotos([]);
+            setUseFallback(false);
+            return;
+          }
+          setAlbums([shared.album]);
+          setPhotos(mergePhotoAlbumIds(shared.photos ?? [], shared.links ?? []));
+          setUseFallback(false);
+          return;
+        }
+
         const [{ data: albumData }, { data: photoData }, albumLinks] =
           await Promise.all([
             supabase
@@ -417,20 +448,21 @@ export default function PhotographyPage() {
           setUseFallback(!sharedAlbumId);
         }
       } catch {
-        setUseFallback(!sharedAlbumId);
+        setUseFallback(!sharedAlbumId && !shareToken);
       }
     };
     load();
-  }, [sharedAlbumId]);
+  }, [sharedAlbumId, shareToken]);
 
   const resolveVis = (p: PhotoRow) =>
     p.visibility ?? (p.visible ? "public" : "hidden");
 
-  const sharedAlbum = sharedAlbumId
-    ? (albums.find((a) => a.id === sharedAlbumId) ?? null)
+  const activeSharedAlbumId = shareToken ? albums[0]?.id : sharedAlbumId;
+  const sharedAlbum = activeSharedAlbumId
+    ? (albums.find((a) => a.id === activeSharedAlbumId) ?? null)
     : null;
   const splashName = clientName || sharedAlbum?.title || "this portfolio";
-  const showSplash = !!(sharedAlbumId && !splashDismissed);
+  const showSplash = !!((shareToken || sharedAlbumId) && !splashDismissed);
   const pageTitle = "Photography";
 
   // Public page: only visible gallery albums and public photos.
@@ -465,7 +497,7 @@ export default function PhotographyPage() {
   // Group by album. Only show standalone public photos when there are no albums;
   // otherwise unassigned photos can look like they belong to the previous album.
   const albumGroups: { album: AlbumRow | null; photos: PhotoRow[] }[] = [];
-  if (sharedAlbumId) {
+  if (shareToken || sharedAlbumId) {
     albumGroups.push({ album: sharedAlbum, photos: sharedPhotos });
   } else if (!useFallback) {
     for (const album of galleryAlbums) {

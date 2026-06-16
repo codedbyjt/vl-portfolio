@@ -20,6 +20,7 @@ export default function ShopPage() {
     supabase
       .from("shop_items")
       .select("id, title, price, stock, image_url")
+      .order("sort_order", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: false })
       .then(({ data }) => {
         if (data) setItems(data);
@@ -35,7 +36,7 @@ export default function ShopPage() {
         </h1>
       </div>
 
-      <div className="px-6 py-8 grid grid-cols-2 md:grid-cols-3 gap-6 max-w-3xl">
+      <div className="px-6 py-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl">
         {loading && (
           <>
             {[0, 1, 2].map((i) => (

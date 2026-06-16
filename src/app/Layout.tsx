@@ -27,11 +27,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [photographyOpen, setPhotographyOpen] = useState(
     isPhotographySection && !shouldCollapsePhotographyNav,
   );
-  // Shared album link — hide all nav chrome (only when explicitly ref'd from a shared link)
-  const isSharedAlbum =
-    (location.pathname === "/photography" &&
-      searchParams.get("ref") === "shared") ||
-    (location.pathname === "/about" && searchParams.get("ref") === "album");
+  const isSharedPortfolio =
+    location.pathname === "/photography" &&
+    (searchParams.has("share") || searchParams.get("ref") === "shared");
+  const isSharedAbout =
+    location.pathname === "/about" && searchParams.get("ref") === "album";
+  const hideSiteNav = isSharedPortfolio || isSharedAbout;
 
   useEffect(() => {
     if (isPhotographySection) {
@@ -140,20 +141,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-white font-sans">
-      {/* ── Shared album minimal bar (logo + About only) ── */}
-      {isSharedAlbum && (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-white flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <button
-            onClick={() => navigate("/")}
-            className="hover:opacity-60 transition-opacity"
-          >
-            <img
-              src={publicAsset("/logo-tight.png")}
-              alt="Vic Lentaigne"
-              className="w-[160px] h-auto"
-            />
-          </button>
-          {location.pathname === "/about" ? (
+      {/* ── Shared portfolio minimal bar ── */}
+      {(isSharedPortfolio || isSharedAbout) && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-white flex items-center justify-between gap-4 px-4 py-4 border-b border-gray-100 sm:px-6">
+          <img
+            src={publicAsset("/logo-tight.png")}
+            alt="Vic Lentaigne"
+            className="h-auto w-[clamp(170px,58vw,220px)] max-w-[calc(100vw-7rem)] flex-none object-contain"
+          />
+          {isSharedAbout ? (
             <button
               onClick={() => navigate(-1)}
               className="text-[12px] uppercase tracking-widest text-gray-500 hover:text-gray-900 transition-colors"
@@ -172,7 +168,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       )}
 
       {/* ── Desktop left nav (always visible ≥ md) ── */}
-      {!isSharedAlbum && (
+      {!hideSiteNav && (
         <nav className="hidden md:flex fixed top-0 left-0 h-full w-[260px] flex-col pt-10 z-40 bg-white">
           <button
             onClick={() => navigate("/")}
@@ -191,7 +187,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       )}
 
       {/* ── Mobile header ── */}
-      {!isSharedAlbum && (
+      {!hideSiteNav && (
         <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-white flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <button
             onClick={() => navigate("/")}
@@ -210,7 +206,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       )}
 
       {/* ── Mobile drawer ── */}
-      {!isSharedAlbum && (
+      {!hideSiteNav && (
         <AnimatePresence>
           {mobileOpen && (
             <>
@@ -256,7 +252,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       )}
 
       {/* ── Page content ── */}
-      {isSharedAlbum ? (
+      {isSharedPortfolio ? (
+        <main className="min-h-screen pt-[57px]">{children}</main>
+      ) : isSharedAbout ? (
         <main className="min-h-screen pt-[57px]">{children}</main>
       ) : isHome ? (
         // Landing: sits flush beside the left nav, full viewport height
