@@ -107,13 +107,13 @@ export function NewsletterSignup({
       >
         <span className="flex min-w-0 items-center gap-3">
           <Mail size={16} className="shrink-0 text-gray-500" aria-hidden="true" />
-          <span className="min-w-0">
+          <span className="min-w-0 flex-1">
             <span className="block text-[12px] uppercase tracking-widest text-gray-500">
-              Portfolio updates
+              Newsletter
             </span>
             {!isOpen && (
-              <span className="block truncate text-[12px] text-gray-400">
-                Join the mailing list
+              <span className="block max-w-full text-[12px] leading-5 text-gray-400">
+                Sign up for work updates, events, and exhibitions.
               </span>
             )}
           </span>
