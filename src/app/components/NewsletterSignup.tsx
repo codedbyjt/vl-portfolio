@@ -7,13 +7,27 @@ type NewsletterSignupProps = {
   mailerLiteSubscribeUrl?: string;
 };
 
+type MailerLiteResponse = {
+  success?: boolean;
+  errors?: {
+    fields?: Record<string, string[]>;
+  };
+};
+
+function getMailerLiteError(response: MailerLiteResponse) {
+  const fieldErrors = response.errors?.fields;
+
+  if (!fieldErrors) return "MailerLite rejected the signup.";
+
+  return Object.values(fieldErrors).flat().join(" ");
+}
+
 export function NewsletterSignup({
   className = "",
   mailerLiteSubscribeUrl = "",
 }: NewsletterSignupProps) {
   const emailInputId = useId();
   const panelId = useId();
-  const iframeName = `${panelId.replace(/[^a-zA-Z0-9_-]/g, "")}-mailerlite`;
   const [isOpen, setIsOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<
@@ -24,7 +38,6 @@ export function NewsletterSignup({
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const form = event.currentTarget;
     const normalizedEmail = email.trim().toLowerCase();
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
@@ -47,16 +60,36 @@ export function NewsletterSignup({
       return;
     }
 
-    const mailerLiteEmailInput = form.elements.namedItem(
-      "fields[email]",
-    ) as HTMLInputElement | null;
-
-    if (mailerLiteEmailInput) {
-      mailerLiteEmailInput.value = normalizedEmail;
-    }
-
     if (mailerLiteSubscribeUrl) {
-      form.submit();
+      const formData = new URLSearchParams();
+      formData.set("fields[email]", normalizedEmail);
+      formData.set("ml-submit", "1");
+      formData.set("anticsrf", "true");
+
+      try {
+        const response = await fetch(mailerLiteSubscribeUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+          },
+          body: formData.toString(),
+        });
+        const result = (await response.json()) as MailerLiteResponse;
+
+        if (!response.ok || result.success === false) {
+          console.error("MailerLite signup failed:", result);
+          setStatus("error");
+          setMessage(
+            `Saved in Admin, but MailerLite did not accept it. ${getMailerLiteError(result)}`,
+          );
+          return;
+        }
+      } catch (error) {
+        console.error("MailerLite signup request failed:", error);
+        setStatus("error");
+        setMessage("Saved in Admin, but MailerLite could not be reached.");
+        return;
+      }
     }
 
     setStatus("submitted");
@@ -97,9 +130,7 @@ export function NewsletterSignup({
       {isOpen && (
         <form
           id={panelId}
-          action={mailerLiteSubscribeUrl || undefined}
           method="post"
-          target={iframeName}
           onSubmit={handleSubmit}
           className="border-t border-gray-100 px-4 pb-4 pt-2"
           noValidate
@@ -134,12 +165,6 @@ export function NewsletterSignup({
 
           <input type="hidden" name="ml-submit" value="1" />
           <input type="hidden" name="anticsrf" value="true" />
-          <iframe
-            title="Newsletter signup"
-            name={iframeName}
-            className="hidden"
-            aria-hidden="true"
-          />
 
           {message && (
             <p
