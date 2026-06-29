@@ -2,13 +2,11 @@ import { useEffect, useState } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Menu, X } from "lucide-react";
-
-const NAV_ITEMS = [
-  { label: "Video", path: "/video" },
-  { label: "Shop", path: "/shop" },
-  { label: "Instagram", path: "https://www.instagram.com/viclentaigne/", external: true },
-  { label: "About", path: "/about" },
-];
+import {
+  defaultSiteSettings,
+  loadSiteSettings,
+  type SiteNavItem,
+} from "../lib/siteSettings";
 
 const publicAsset = (path: string) =>
   `${import.meta.env.BASE_URL}${path.replace(/^\//, "")}`;
@@ -18,6 +16,22 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [logoUrl, setLogoUrl] = useState(defaultSiteSettings.logo_url);
+  const [logoAltText, setLogoAltText] = useState(
+    defaultSiteSettings.logo_alt_text,
+  );
+  const [navItems, setNavItems] = useState<SiteNavItem[]>(
+    defaultSiteSettings.nav_items,
+  );
+  const [photographyNavLabel, setPhotographyNavLabel] = useState(
+    defaultSiteSettings.photography_nav_label,
+  );
+  const [photographyMainLabel, setPhotographyMainLabel] = useState(
+    defaultSiteSettings.photography_main_label,
+  );
+  const [photographyNavItems, setPhotographyNavItems] = useState<SiteNavItem[]>(
+    defaultSiteSettings.photography_nav_items,
+  );
   const isHome = location.pathname === "/";
   const isPhotographySection = location.pathname.startsWith("/photography");
   const shouldCollapsePhotographyNav =
@@ -33,6 +47,29 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const isSharedAbout =
     location.pathname === "/about" && searchParams.get("ref") === "album";
   const hideSiteNav = isSharedPortfolio || isSharedAbout;
+  const displayLogoUrl = logoUrl.trim() || publicAsset("/logo-tight.png");
+
+  useEffect(() => {
+    let active = true;
+
+    loadSiteSettings()
+      .then((settings) => {
+        if (!active) return;
+        setLogoUrl(settings.logo_url);
+        setLogoAltText(settings.logo_alt_text);
+        setPhotographyNavLabel(settings.photography_nav_label);
+        setPhotographyMainLabel(settings.photography_main_label);
+        setPhotographyNavItems(settings.photography_nav_items);
+        setNavItems(settings.nav_items);
+      })
+      .catch((error) => {
+        console.error("Failed to load navigation settings:", error);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (isPhotographySection) {
@@ -52,7 +89,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               : "text-gray-500 hover:text-gray-900"
           }`}
         >
-          <span>Photography</span>
+          <span>{photographyNavLabel}</span>
           <ChevronDown
             size={14}
             className={`transition-transform ${
@@ -70,72 +107,64 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               transition={{ duration: 0.18 }}
               className="overflow-hidden pl-4"
             >
-              <li>
-                <button
-                  onClick={() => {
-                    navigate("/photography");
-                    onClick?.();
-                  }}
-                  className={`block w-full text-left text-[12px] leading-6 tracking-wide uppercase transition-colors ${
-                    location.pathname === "/photography"
-                      ? "text-gray-900"
-                      : "text-gray-400 hover:text-gray-900"
-                  }`}
-                >
-                  Main Portfolio
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => {
-                    navigate("/photography/commercial");
-                    onClick?.();
-                  }}
-                  className={`block w-full text-left text-[12px] leading-6 tracking-wide uppercase transition-colors ${
-                    location.pathname === "/photography/commercial"
-                      ? "text-gray-900"
-                      : "text-gray-400 hover:text-gray-900"
-                  }`}
-                >
-                  Commercial
-                </button>
-              </li>
+              {photographyNavItems
+                .filter((item) => item.visible)
+                .map((item) => (
+                  <li key={item.id}>
+                    <button
+                      onClick={() => {
+                        navigate(item.path);
+                        onClick?.();
+                      }}
+                      className={`block w-full text-left text-[12px] leading-6 tracking-wide uppercase transition-colors ${
+                        location.pathname === item.path
+                          ? "text-gray-900"
+                          : "text-gray-400 hover:text-gray-900"
+                      }`}
+                    >
+                      {item.label || photographyMainLabel}
+                    </button>
+                  </li>
+                ))}
             </motion.ul>
           )}
         </AnimatePresence>
       </li>
-      {NAV_ITEMS.map(({ label, path, external }) => {
-        const active = !external && location.pathname.startsWith(path);
-        return (
-          <li key={label}>
-            {external ? (
-              <a
-                href={path}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={onClick}
-                className="block text-[14px] leading-7 tracking-wide text-gray-500 hover:text-gray-900 transition-colors uppercase"
-              >
-                {label}.
-              </a>
-            ) : (
-              <button
-                onClick={() => {
-                  navigate(path);
-                  onClick?.();
-                }}
-                className={`block text-[14px] leading-7 tracking-wide transition-colors text-left w-full uppercase ${
-                  active
-                    ? "text-gray-900 underline underline-offset-2"
-                    : "text-gray-500 hover:text-gray-900"
-                }`}
-              >
-                {label}
-              </button>
-            )}
-          </li>
-        );
-      })}
+      {navItems
+        .filter((item) => item.visible)
+        .map(({ id, label, path, external }) => {
+          const active = !external && location.pathname.startsWith(path);
+
+          return (
+            <li key={id}>
+              {external ? (
+                <a
+                  href={path}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={onClick}
+                  className="block text-[14px] leading-7 tracking-wide text-gray-500 hover:text-gray-900 transition-colors uppercase"
+                >
+                  {label}.
+                </a>
+              ) : (
+                <button
+                  onClick={() => {
+                    navigate(path);
+                    onClick?.();
+                  }}
+                  className={`block text-[14px] leading-7 tracking-wide transition-colors text-left w-full uppercase ${
+                    active
+                      ? "text-gray-900 underline underline-offset-2"
+                      : "text-gray-500 hover:text-gray-900"
+                  }`}
+                >
+                  {label}
+                </button>
+              )}
+            </li>
+          );
+        })}
     </ul>
   );
 
@@ -145,8 +174,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {(isSharedPortfolio || isSharedAbout) && (
         <div className="fixed top-0 left-0 right-0 z-50 bg-white flex items-center justify-between gap-4 px-4 py-4 border-b border-gray-100 sm:px-6">
           <img
-            src={publicAsset("/logo-tight.png")}
-            alt="Vic Lentaigne"
+            src={displayLogoUrl}
+            alt={logoAltText}
             className="h-auto w-[clamp(170px,58vw,220px)] max-w-[calc(100vw-7rem)] flex-none object-contain"
           />
           {isSharedAbout ? (
@@ -175,8 +204,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             className="mb-10 w-full px-6 text-left hover:opacity-60 transition-opacity"
           >
             <img
-              src={publicAsset("/logo-tight.png")}
-              alt="Vic Lentaigne"
+              src={displayLogoUrl}
+              alt={logoAltText}
               className="w-full max-w-[212px] h-auto"
             />
           </button>
@@ -194,8 +223,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             className="hover:opacity-60 transition-opacity"
           >
             <img
-              src={publicAsset("/logo-tight.png")}
-              alt="Vic Lentaigne"
+              src={displayLogoUrl}
+              alt={logoAltText}
               className="w-[170px] h-auto"
             />
           </button>
@@ -239,8 +268,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   className="mb-10 block hover:opacity-60 transition-opacity"
                 >
                   <img
-                    src={publicAsset("/logo-tight.png")}
-                    alt="Vic Lentaigne"
+                    src={displayLogoUrl}
+                    alt={logoAltText}
                     className="w-[170px] h-auto"
                   />
                 </button>

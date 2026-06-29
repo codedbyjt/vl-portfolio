@@ -10,6 +10,7 @@ const AdminPage = lazy(() => import("./app/AdminPage.tsx"));
 const LandingPage = lazy(() => import("./app/LandingPage.tsx"));
 const PhotographyPage = lazy(() => import("./app/PhotographyPage.tsx"));
 const CommercialPage = lazy(() => import("./app/CommercialPage.tsx"));
+const CustomPage = lazy(() => import("./app/CustomPage.tsx"));
 const FilmPage = lazy(() => import("./app/FilmPage.tsx"));
 const AboutPage = lazy(() => import("./app/AboutPage.tsx"));
 const ShopPage = lazy(() => import("./app/ShopPage.tsx"));
@@ -54,6 +55,7 @@ function App() {
                   <Route path="/" element={<LandingPage />} />
                   <Route path="/photography" element={<PhotographyPage />} />
                   <Route path="/photography/commercial" element={<CommercialPage />} />
+                  <Route path="/pages/:slug" element={<CustomPage />} />
                   <Route path="/video" element={<FilmPage />} />
                   <Route path="/film" element={<FilmPage />} />
                   <Route path="/about" element={<AboutPage />} />
