@@ -61,6 +61,7 @@ import {
   Underline,
 } from "lucide-react";
 import { MediaStorageUsagePanel } from "./admin/MediaStorageUsagePanel";
+import { PagesAdmin } from "./admin/PagesAdmin";
 import { SiteSettingsAdmin } from "./admin/SiteSettingsAdmin";
 import { SubscribersAdmin } from "./admin/SubscribersAdmin";
 import { VideosAdmin } from "./admin/VideosAdmin";
@@ -68,15 +69,65 @@ import { VideosAdmin } from "./admin/VideosAdmin";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Tab =
-  | "photography"
-  | "portfolio"
-  | "videos"
-  | "shop"
-  | "about"
-  | "subscribers"
-  | "settings"
-  | "storage";
+  | "dashboard"
+  | "work"
+  | "pages"
+  | "nav"
+  | "settings";
+type WorkSection = "photography" | "portfolio" | "videos" | "shop";
+type PagesSection = "custom" | "about";
+type SettingsSection = "site" | "subscribers" | "storage";
 type AllPhotosSort = "" | "date-added" | "home-featured" | "hidden";
+
+interface AdminNavItem {
+  tab: Tab;
+  label: string;
+  description: string;
+}
+
+interface AdminNavGroup {
+  label: string;
+  items: AdminNavItem[];
+}
+
+const adminNavGroups: AdminNavGroup[] = [
+  {
+    label: "Admin",
+    items: [
+      {
+        tab: "dashboard",
+        label: "Home",
+        description: "Start here.",
+      },
+      {
+        tab: "work",
+        label: "Work",
+        description: "Photos, client galleries, videos, and shop.",
+      },
+      {
+        tab: "pages",
+        label: "Pages",
+        description: "About page and simple custom pages.",
+      },
+      {
+        tab: "nav",
+        label: "Menu",
+        description: "Logo and site navigation.",
+      },
+      {
+        tab: "settings",
+        label: "Settings",
+        description: "SEO, newsletter, subscribers, and storage.",
+      },
+    ],
+  },
+];
+
+const adminNavItems = adminNavGroups.flatMap((group) => group.items);
+
+function getAdminNavItem(tab: Tab) {
+  return adminNavItems.find((item) => item.tab === tab) ?? adminNavItems[0];
+}
 
 interface PhotoRow {
   id: string;
@@ -207,22 +258,27 @@ export default function AdminPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState("");
-  const [tab, setTab] = useState<Tab>("photography");
+  const [tab, setTab] = useState<Tab>("dashboard");
+  const [workSection, setWorkSection] = useState<WorkSection>("photography");
+  const [pagesSection, setPagesSection] = useState<PagesSection>("custom");
+  const [settingsSection, setSettingsSection] =
+    useState<SettingsSection>("site");
   const [portfolioPageHref, setPortfolioPageHref] = useState<string | null>(
     null,
   );
+  const activeNavItem = getAdminNavItem(tab);
   const pageHref =
-    tab === "photography"
+    tab === "work" && workSection === "photography"
       ? `${import.meta.env.BASE_URL}photography`
-      : tab === "portfolio"
+      : tab === "work" && workSection === "portfolio"
         ? portfolioPageHref
-        : tab === "videos"
+        : tab === "work" && workSection === "videos"
           ? `${import.meta.env.BASE_URL}film`
-          : tab === "shop"
+          : tab === "work" && workSection === "shop"
             ? `${import.meta.env.BASE_URL}shop`
-            : tab === "about"
+            : tab === "pages" && pagesSection === "about"
               ? `${import.meta.env.BASE_URL}about`
-              : tab === "settings"
+              : tab === "dashboard" || tab === "settings" || tab === "nav"
                 ? `${import.meta.env.BASE_URL}`
                 : null;
 
@@ -303,7 +359,7 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-4 flex items-center justify-between sm:px-6">
+      <div className="sticky top-0 z-30 bg-white border-b border-gray-200 px-4 py-4 flex items-center justify-between sm:px-6">
         <div className="flex items-center gap-6">
           <span className="text-xs uppercase tracking-widest font-medium text-gray-900">
             Admin
@@ -317,72 +373,334 @@ export default function AdminPage() {
         </button>
       </div>
 
-      {/* Tabs */}
-      <div className="bg-white border-b border-gray-200 px-4 flex items-center gap-5 overflow-x-auto sm:px-6 sm:gap-6">
-        {(
-          [
-            "photography",
-            "portfolio",
-            "videos",
-            "shop",
-            "about",
-            "subscribers",
-            "settings",
-            "storage",
-          ] as Tab[]
-        ).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`py-4 text-xs uppercase tracking-widest border-b-2 transition-colors ${
-              tab === t
-                ? "border-gray-900 text-gray-900"
-                : "border-transparent text-gray-400 hover:text-gray-700"
-            }`}
-          >
-            {t === "portfolio" ? "portfolios" : t}
-          </button>
-        ))}
-        {pageHref && (
-          <a
-            href={pageHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="ml-auto flex items-center gap-1.5 py-2 px-3 text-xs uppercase tracking-widest text-gray-400 hover:text-gray-900 border border-gray-200 rounded transition-colors whitespace-nowrap"
-          >
-            <span aria-hidden="true">↗</span>
-            View{" "}
-            {tab === "videos"
-              ? "film"
-              : tab === "portfolio"
-                ? "portfolio"
-                : tab}{" "}
-            page
-          </a>
-        )}
-      </div>
+      <div className="lg:flex">
+        <aside className="hidden w-72 shrink-0 border-r border-gray-200 bg-white lg:block">
+          <div className="sticky top-[57px] h-[calc(100vh-57px)] overflow-y-auto px-5 py-6">
+            <AdminNavigation activeTab={tab} onSelect={setTab} />
+          </div>
+        </aside>
 
-      {/* Content */}
-      <div className="max-w-screen-2xl px-4 py-6 sm:px-6 sm:py-8">
-        {tab === "photography" ? (
-          <PhotographyAdmin />
-        ) : tab === "portfolio" ? (
-          <PortfolioAdmin onViewPageHrefChange={setPortfolioPageHref} />
-        ) : tab === "videos" ? (
-          <VideosAdmin />
-        ) : tab === "shop" ? (
-          <ShopAdmin />
-        ) : tab === "about" ? (
-          <AboutAdmin />
-        ) : tab === "subscribers" ? (
-          <SubscribersAdmin />
-        ) : tab === "settings" ? (
-          <SiteSettingsAdmin />
-        ) : (
-          <MediaStorageUsagePanel />
-        )}
+        <div className="min-w-0 flex-1">
+          <div className="border-b border-gray-200 bg-white px-4 py-3 lg:hidden">
+            <label className="block">
+              <span className="mb-2 block text-[11px] uppercase tracking-widest text-gray-400">
+                Admin area
+              </span>
+              <select
+                value={tab}
+                onChange={(event) => setTab(event.target.value as Tab)}
+                className="w-full border border-gray-200 bg-white px-3 py-3 text-sm text-gray-900 outline-none focus:border-gray-900"
+              >
+                {adminNavGroups.map((group) => (
+                  <optgroup key={group.label} label={group.label}>
+                    {group.items.map((item) => (
+                      <option key={item.tab} value={item.tab}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="border-b border-gray-200 bg-white px-4 py-5 sm:px-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h1 className="text-sm font-medium uppercase tracking-widest text-gray-900">
+                  {activeNavItem.label}
+                </h1>
+                <p className="mt-1 text-xs text-gray-400">
+                  {activeNavItem.description}
+                </p>
+              </div>
+              {pageHref && (
+                <a
+                  href={pageHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex w-fit items-center gap-1.5 border border-gray-200 px-3 py-2 text-xs uppercase tracking-widest text-gray-400 transition-colors hover:border-gray-900 hover:text-gray-900"
+                >
+                  <span aria-hidden="true">↗</span>
+                  View site
+                </a>
+              )}
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="max-w-screen-2xl px-4 py-6 sm:px-6 sm:py-8">
+            {tab === "dashboard" ? (
+              <AdminDashboard onSelectTab={setTab} />
+            ) : tab === "work" ? (
+              <AdminWorkSection
+                activeSection={workSection}
+                onSectionChange={setWorkSection}
+                onViewPortfolioPageHrefChange={setPortfolioPageHref}
+              />
+            ) : tab === "pages" ? (
+              <AdminPagesSection
+                activeSection={pagesSection}
+                onSectionChange={setPagesSection}
+              />
+            ) : tab === "nav" ? (
+              <SiteSettingsAdmin section="nav" />
+            ) : (
+              <AdminSettingsSection
+                activeSection={settingsSection}
+                onSectionChange={setSettingsSection}
+              />
+            )}
+          </div>
+        </div>
       </div>
     </div>
+  );
+}
+
+function AdminNavigation({
+  activeTab,
+  onSelect,
+}: {
+  activeTab: Tab;
+  onSelect: (tab: Tab) => void;
+}) {
+  return (
+    <nav className="space-y-7" aria-label="Admin sections">
+      {adminNavGroups.map((group) => (
+        <div key={group.label}>
+          <h2 className="mb-2 text-[11px] uppercase tracking-widest text-gray-400">
+            {group.label}
+          </h2>
+          <div className="space-y-1">
+            {group.items.map((item) => (
+              <button
+                key={item.tab}
+                onClick={() => onSelect(item.tab)}
+                className={`block w-full border px-3 py-3 text-left transition-colors ${
+                  activeTab === item.tab
+                    ? "border-gray-900 bg-gray-900 text-white"
+                    : "border-transparent text-gray-500 hover:border-gray-200 hover:bg-gray-50 hover:text-gray-900"
+                }`}
+              >
+                <span className="block text-xs uppercase tracking-widest">
+                  {item.label}
+                </span>
+                <span
+                  className={`mt-1 block text-[11px] leading-relaxed ${
+                    activeTab === item.tab ? "text-gray-300" : "text-gray-400"
+                  }`}
+                >
+                  {item.description}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </nav>
+  );
+}
+
+function AdminDashboard({ onSelectTab }: { onSelectTab: (tab: Tab) => void }) {
+  const quickActions: AdminNavItem[] = [
+    getAdminNavItem("work"),
+    getAdminNavItem("pages"),
+    getAdminNavItem("nav"),
+    getAdminNavItem("settings"),
+  ];
+
+  return (
+    <section className="space-y-6">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {quickActions.map((item) => (
+          <button
+            key={item.tab}
+            type="button"
+            onClick={() => onSelectTab(item.tab)}
+            className="border border-gray-200 bg-white p-5 text-left transition-colors hover:border-gray-900"
+          >
+            <span className="block text-xs uppercase tracking-widest text-gray-900">
+              {item.label}
+            </span>
+            <span className="mt-2 block text-xs leading-relaxed text-gray-400">
+              {item.description}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <div className="border border-gray-200 bg-white p-5 xl:col-span-2">
+          <h2 className="text-xs uppercase tracking-widest text-gray-500">
+            Simple Flow
+          </h2>
+          <p className="mt-3 text-sm leading-relaxed text-gray-500">
+            Add work, write pages, choose what appears in the menu, then adjust
+            settings only when needed. The technical bits are tucked away.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function SectionSwitch<T extends string>({
+  value,
+  options,
+  onChange,
+}: {
+  value: T;
+  options: { value: T; label: string; description: string }[];
+  onChange: (value: T) => void;
+}) {
+  return (
+    <div className="mb-6 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          onClick={() => onChange(option.value)}
+          className={`border p-4 text-left transition-colors ${
+            value === option.value
+              ? "border-gray-900 bg-gray-900 text-white"
+              : "border-gray-200 bg-white text-gray-500 hover:border-gray-900 hover:text-gray-900"
+          }`}
+        >
+          <span className="block text-xs uppercase tracking-widest">
+            {option.label}
+          </span>
+          <span
+            className={`mt-1 block text-[11px] leading-relaxed ${
+              value === option.value ? "text-gray-300" : "text-gray-400"
+            }`}
+          >
+            {option.description}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function AdminWorkSection({
+  activeSection,
+  onSectionChange,
+  onViewPortfolioPageHrefChange,
+}: {
+  activeSection: WorkSection;
+  onSectionChange: (section: WorkSection) => void;
+  onViewPortfolioPageHrefChange: (href: string | null) => void;
+}) {
+  return (
+    <section>
+      <SectionSwitch
+        value={activeSection}
+        onChange={onSectionChange}
+        options={[
+          {
+            value: "photography",
+            label: "Photos",
+            description: "Public galleries and albums.",
+          },
+          {
+            value: "portfolio",
+            label: "Client Links",
+            description: "Private shareable portfolios.",
+          },
+          {
+            value: "videos",
+            label: "Videos",
+            description: "Film and video work.",
+          },
+          {
+            value: "shop",
+            label: "Shop",
+            description: "Products and checkout links.",
+          },
+        ]}
+      />
+      {activeSection === "photography" ? (
+        <PhotographyAdmin />
+      ) : activeSection === "portfolio" ? (
+        <PortfolioAdmin onViewPageHrefChange={onViewPortfolioPageHrefChange} />
+      ) : activeSection === "videos" ? (
+        <VideosAdmin />
+      ) : (
+        <ShopAdmin />
+      )}
+    </section>
+  );
+}
+
+function AdminPagesSection({
+  activeSection,
+  onSectionChange,
+}: {
+  activeSection: PagesSection;
+  onSectionChange: (section: PagesSection) => void;
+}) {
+  return (
+    <section>
+      <SectionSwitch
+        value={activeSection}
+        onChange={onSectionChange}
+        options={[
+          {
+            value: "custom",
+            label: "Simple Pages",
+            description: "Press, contact, services, and more.",
+          },
+          {
+            value: "about",
+            label: "About",
+            description: "Bio and contact copy.",
+          },
+        ]}
+      />
+      {activeSection === "custom" ? <PagesAdmin /> : <AboutAdmin />}
+    </section>
+  );
+}
+
+function AdminSettingsSection({
+  activeSection,
+  onSectionChange,
+}: {
+  activeSection: SettingsSection;
+  onSectionChange: (section: SettingsSection) => void;
+}) {
+  return (
+    <section>
+      <SectionSwitch
+        value={activeSection}
+        onChange={onSectionChange}
+        options={[
+          {
+            value: "site",
+            label: "Site",
+            description: "Homepage, newsletter, and SEO.",
+          },
+          {
+            value: "subscribers",
+            label: "Subscribers",
+            description: "Newsletter signups.",
+          },
+          {
+            value: "storage",
+            label: "Storage",
+            description: "Media usage.",
+          },
+        ]}
+      />
+      {activeSection === "site" ? (
+        <SiteSettingsAdmin section="settings" />
+      ) : activeSection === "subscribers" ? (
+        <SubscribersAdmin />
+      ) : (
+        <MediaStorageUsagePanel />
+      )}
+    </section>
   );
 }
 
