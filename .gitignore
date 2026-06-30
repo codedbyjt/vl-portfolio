@@ -5,6 +5,9 @@ node_modules
 dist
 build
 
+# Local/raw media exports
+PERSONAL/
+
 # macOS system files
 .DS_Store
 
